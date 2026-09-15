@@ -1,0 +1,93 @@
+.filters {
+  position: sticky;
+
+  top: 104px;
+
+  height: fit-content;
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  background: var(--surface);
+
+  padding: 22px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding-bottom: 16px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.title svg {
+  color: var(--primary);
+}
+
+.title h2 {
+  margin: 0;
+
+  color: var(--foreground);
+
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.options {
+  margin-top: 16px;
+
+  display: grid;
+
+  gap: 8px;
+}
+
+.options button {
+  width: 100%;
+  min-height: 44px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  background: transparent;
+
+  padding: 0 12px;
+
+  color: var(--muted);
+
+  font-size: 13px;
+  font-weight: 800;
+
+  text-align: left;
+
+  cursor: default;
+}
+
+.options button:hover {
+  border-color: var(--border);
+
+  background: rgba(255, 255, 255, 0.025);
+
+  color: var(--foreground);
+}
+
+.options svg {
+  color: var(--primary);
+}
+
+.filters > p {
+  margin: 20px 0 0;
+
+  color: #666f7c;
+
+  font-size: 11px;
+  line-height: 1.5;
+}

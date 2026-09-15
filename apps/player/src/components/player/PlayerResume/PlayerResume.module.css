@@ -1,0 +1,317 @@
+.section {
+  padding: 42px 0 30px;
+
+  background: transparent;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+
+  margin-bottom: 28px;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.avatar {
+  width: 58px;
+  height: 58px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 18px;
+
+  color: #00e991;
+  background: rgba(0, 233, 145, 0.1);
+
+  border: 1px solid rgba(0, 233, 145, 0.18);
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+
+  margin-bottom: 7px;
+}
+
+.badges span {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 9px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  color: #f4bd3f;
+  background: rgba(244, 189, 63, 0.12);
+  border: 1px solid rgba(244, 189, 63, 0.2);
+}
+
+.player h1 {
+  margin: 0;
+
+  color: #f8fafc;
+
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.player p {
+  margin: 7px 0 0;
+
+  color: #8490a5;
+
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reserveButton {
+  min-height: 50px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 0 25px;
+
+  border-radius: 8px;
+
+  background: #00e991;
+  color: #04100b;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  text-decoration: none;
+
+  box-shadow:
+    0 0 20px rgba(0, 233, 145, 0.15),
+    0 8px 25px rgba(0, 0, 0, 0.16);
+
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.reserveButton:hover {
+  transform: translateY(-1px);
+  background: #1af2a0;
+}
+
+.logoutButton {
+  min-height: 50px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  padding: 0 18px;
+
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  background: transparent;
+  color: #d7deea;
+
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.logoutButton:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.card {
+  min-height: 82px;
+
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  padding: 18px;
+
+  border-radius: 14px;
+
+  background: #101720;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cardIcon {
+  width: 43px;
+  height: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 11px;
+
+  color: #00e991;
+  background: rgba(0, 233, 145, 0.1);
+}
+
+.calendarIcon {
+  color: #b57cff;
+  background: rgba(150, 89, 255, 0.14);
+}
+
+.card > div:last-child {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card span {
+  color: #8490a5;
+
+  font-size: 12px;
+}
+
+.card strong {
+  color: #f6f8fc;
+
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.card small {
+  margin-top: 2px;
+
+  color: #8490a5;
+
+  font-size: 11px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.error {
+  color: #fca5a5 !important;
+}
+
+.errorMessage {
+  margin: 12px 0 0;
+
+  color: #fca5a5;
+
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .profile {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .reserveButton {
+    flex: 1;
+  }
+}
+
+@media (max-width: 650px) {
+  .section {
+    padding: 28px 0 22px;
+  }
+
+  .player {
+    align-items: flex-start;
+  }
+
+  .player h1 {
+    font-size: 23px;
+  }
+
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nextGameContent {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nextGameHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.paymentBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.paymentPending {
+  color: #ffbf47;
+  background: rgba(255, 191, 71, 0.1);
+  border: 1px solid rgba(255, 191, 71, 0.24);
+}
+
+.paymentPaid {
+  color: #00e991;
+  background: rgba(0, 233, 145, 0.1);
+  border: 1px solid rgba(0, 233, 145, 0.24);
+}

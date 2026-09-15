@@ -1,0 +1,85 @@
+:root {
+  --background: #090d13;
+
+  --surface: #111720;
+
+  --foreground: #f8fafc;
+
+  --muted: #9aa3b2;
+
+  --primary: #6ee96f;
+
+  --primary-foreground: #08110b;
+
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+
+  margin: 0;
+  padding: 0;
+
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    radial-gradient(
+      circle at 18% 0%,
+      rgba(91, 235, 105, 0.07),
+      transparent 26%
+    ),
+    var(--background);
+
+  background-size:
+    32px 32px,
+    32px 32px,
+    auto,
+    auto;
+
+  color: var(--foreground);
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+.container {
+  width: min(1360px, calc(100% - 48px));
+
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .container {
+    width: min(100% - 32px, 1360px);
+  }
+}
+
+.player-page {
+  min-height: 100vh;
+
+  background-color: #060b11;
+
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+
+  background-size: 40px 40px;
+}

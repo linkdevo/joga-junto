@@ -1,0 +1,102 @@
+.section {
+  padding: 64px 0;
+
+  background: transparent;
+}
+
+.heading {
+  max-width: 680px;
+
+  margin-bottom: 36px;
+}
+
+.heading > span {
+  color: var(--primary);
+
+  font-size: 12px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.heading h1 {
+  margin: 10px 0 0;
+
+  color: var(--foreground);
+
+  font-size: clamp(36px, 5vw, 54px);
+  line-height: 1;
+
+  font-weight: 950;
+
+  letter-spacing: -0.05em;
+}
+
+.heading p {
+  margin: 16px 0 0;
+
+  color: var(--muted);
+
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.layout {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    250px;
+
+  gap: 32px;
+
+  align-items: start;
+}
+
+.grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 20px;
+}
+
+.message {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  background: var(--surface);
+
+  padding: 32px;
+}
+
+.message h2 {
+  margin: 0;
+
+  font-size: 20px;
+}
+
+.message p {
+  margin: 10px 0 0;
+
+  color: var(--muted);
+}
+
+@media (max-width: 1150px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

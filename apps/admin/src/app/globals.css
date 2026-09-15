@@ -1,0 +1,73 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --background: #0d1015;
+
+  --sidebar: #13171d;
+
+  --surface: #191e26;
+  --surface-light: #202630;
+
+  --border: #2b323d;
+
+  --text-primary: #f7f9fc;
+  --text-secondary: #93a1b7;
+
+  --green: #00e889;
+  --green-hover: #00cd79;
+  --green-dark: #063f2d;
+
+  --danger: #ff5c67;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  min-width: 320px;
+
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+
+  background: var(--background);
+  color: var(--text-primary);
+
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}

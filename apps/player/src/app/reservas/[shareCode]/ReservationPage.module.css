@@ -1,0 +1,703 @@
+.page {
+  min-height: 100vh;
+  padding: 28px 0 56px;
+}
+
+.backLink {
+  display: inline-flex;
+  margin-bottom: 20px;
+
+  color: #9fb0c8;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: #00e991;
+}
+
+/* ================================
+   RESUMO DA RESERVA
+================================ */
+
+.heroCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+
+  background: rgba(13, 23, 39, 0.94);
+
+  padding: 24px;
+}
+
+.eyebrow {
+  color: #00e991;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.heroCard h1 {
+  margin: 10px 0 0;
+
+  color: #f8fafc;
+
+  font-size: clamp(30px, 3.5vw, 42px);
+  line-height: 1.05;
+
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.location {
+  margin: 12px 0 0;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  color: #96a6ba;
+
+  font-size: 14px;
+}
+
+.location svg {
+  color: #00e991;
+}
+
+/* ================================
+   CARDS DE INFORMAÇÕES
+================================ */
+
+.statsGrid {
+  margin-top: 22px;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.statCard {
+  min-height: 82px;
+
+  border-radius: 13px;
+
+  background: rgba(255, 255, 255, 0.03);
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  padding: 16px;
+}
+
+.statCard span {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  color: #7f92ac;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+}
+
+.statCard span svg {
+  color: #00e991;
+}
+
+.statCard strong {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #ffffff;
+
+  font-size: 16px;
+}
+
+/* ================================
+   RESUMO FINANCEIRO
+================================ */
+
+.summaryRow {
+  margin-top: 12px;
+
+  padding: 15px 18px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 16px;
+
+  border-radius: 12px;
+
+  background: #07111e;
+}
+
+.summaryRow span {
+  color: #00e991;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+}
+
+.summaryRow strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #ffffff;
+
+  font-size: 18px;
+}
+
+/* ================================
+   CONTEÚDO
+================================ */
+
+.contentGrid {
+  margin-top: 18px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    290px;
+
+  gap: 18px;
+
+  align-items: start;
+}
+
+.playersCard,
+.sideCard {
+  border-radius: 16px;
+
+  background: rgba(13, 23, 39, 0.94);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.playersCard {
+  padding: 22px;
+}
+
+.sidebar {
+  display: grid;
+
+  gap: 14px;
+}
+
+/* ================================
+   CABEÇALHO JOGADORES
+================================ */
+
+.sectionHeader {
+  display: flex;
+
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-bottom: 16px;
+}
+
+.sectionHeader h2 {
+  margin: 6px 0 0;
+
+  color: #ffffff;
+
+  font-size: 22px;
+}
+
+.playersCounter {
+  color: #00e991;
+
+  font-size: 17px;
+}
+
+/* ================================
+   LOGIN / ENTRAR NA RESERVA
+================================ */
+
+.authBox {
+  margin-bottom: 16px;
+
+  padding: 16px;
+
+  border-radius: 12px;
+
+  background: #111b2b;
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.authBox h3 {
+  margin: 0;
+
+  color: #f8fafc;
+
+  font-size: 16px;
+}
+
+.authBox p {
+  margin: 7px 0 0;
+
+  color: #93a4bb;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+.authActions {
+  margin-top: 12px;
+
+  display: flex;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+}
+
+/* ================================
+   LISTA DE JOGADORES
+================================ */
+
+.playersList {
+  display: grid;
+
+  gap: 8px;
+}
+
+.playerItem,
+.placeholderItem {
+  min-height: 62px;
+
+  display: grid;
+
+  grid-template-columns:
+    22px
+    36px
+    minmax(0, 1fr)
+    auto;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.025);
+
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.placeholderItem {
+  opacity: 0.65;
+}
+
+.playerIndex {
+  color: #62728a;
+
+  font-size: 11px;
+
+  text-align: center;
+}
+
+.playerAvatar {
+  width: 36px;
+  height: 36px;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 10px;
+
+  background: rgba(0, 233, 145, 0.09);
+
+  color: #00e991;
+}
+
+.playerInfo {
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  flex-wrap: wrap;
+}
+
+.playerInfo strong {
+  color: #ffffff;
+
+  font-size: 14px;
+}
+
+.playerInfo small {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #7f92ac;
+
+  font-size: 11px;
+}
+
+.youBadge {
+  padding: 3px 7px;
+
+  border-radius: 999px;
+
+  background: #00e991;
+
+  color: #05120c;
+
+  font-size: 9px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+}
+
+/* ================================
+   STATUS
+================================ */
+
+.statusArea {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  flex-wrap: wrap;
+
+  justify-content: flex-end;
+}
+
+.confirmedStatus,
+.paymentStatus {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  min-height: 28px;
+
+  padding: 0 9px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.confirmedStatus {
+  color: #00e991;
+
+  background: rgba(0, 233, 145, 0.09);
+
+  border: 1px solid rgba(0, 233, 145, 0.25);
+}
+
+.pendingBadge {
+  color: #ffbf47;
+
+  background: rgba(255, 191, 71, 0.08);
+
+  border: 1px solid rgba(255, 191, 71, 0.28);
+}
+
+.paidBadge {
+  color: #00e991;
+
+  background: rgba(0, 233, 145, 0.09);
+
+  border: 1px solid rgba(0, 233, 145, 0.25);
+}
+
+/* ================================
+   SIDEBAR
+================================ */
+
+.sideCard {
+  padding: 18px;
+}
+
+.sideTitle {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 9px;
+}
+
+.sideTitle svg {
+  color: #00e991;
+
+  margin-top: 1px;
+}
+
+.sideTitle h3 {
+  margin: 5px 0 0;
+
+  color: #f8fafc;
+
+  font-size: 18px;
+}
+
+.sideCard p {
+  margin: 10px 0 0;
+
+  color: #97a8bd;
+
+  font-size: 12px;
+
+  line-height: 1.45;
+}
+
+/* ================================
+   LINK
+================================ */
+
+.copyField {
+  width: 100%;
+
+  margin-top: 12px;
+
+  padding: 11px 12px;
+
+  border-radius: 9px;
+
+  background: #06111f;
+
+  border: 1px solid rgba(255, 255, 255, 0.07);
+
+  color: #dce5ef;
+
+  font-size: 11px;
+
+  overflow-wrap: anywhere;
+}
+
+/* ================================
+   BOTÕES
+================================ */
+
+.primaryButton,
+.secondaryButton {
+  min-height: 42px;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 0 14px;
+
+  border-radius: 9px;
+
+  font: inherit;
+
+  font-size: 12px;
+  font-weight: 900;
+
+  text-decoration: none;
+
+  cursor: pointer;
+}
+
+.primaryButton {
+  margin-top: 12px;
+
+  border: 0;
+
+  background: #00e991;
+
+  color: #04100a;
+}
+
+.primaryButton:hover {
+  background: #1af2a0;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+
+  cursor: wait;
+}
+
+.secondaryButton {
+  margin-top: 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  background: transparent;
+
+  color: #f3f6fb;
+}
+
+/* ================================
+   PAGAMENTO
+================================ */
+
+.paymentTop {
+  margin-top: 12px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+.paymentTop span {
+  color: #91a3b9;
+
+  font-size: 10px;
+
+  text-transform: uppercase;
+
+  font-weight: 800;
+}
+
+.paymentTop strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #ffffff;
+
+  font-size: 21px;
+}
+
+.pixBox {
+  margin-top: 12px;
+}
+
+.pixBox span {
+  color: #8ea0b7;
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  text-transform: uppercase;
+}
+
+.sideNote {
+  display: block;
+
+  margin-top: 10px;
+
+  color: #7f92ac;
+
+  font-size: 10px;
+
+  line-height: 1.45;
+}
+
+/* ================================
+   MENSAGENS
+================================ */
+
+.error {
+  margin: 12px 0 0;
+
+  color: #ff8b93;
+
+  font-size: 12px;
+}
+
+.success {
+  color: #00e991;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.centerState {
+  min-height: 50vh;
+
+  display: grid;
+
+  place-items: center;
+
+  color: #ffffff;
+}
+
+/* ================================
+   RESPONSIVO
+================================ */
+
+@media (max-width: 1100px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding-top: 20px;
+  }
+
+  .heroCard,
+  .playersCard,
+  .sideCard {
+    padding: 16px;
+  }
+
+  .heroCard h1 {
+    font-size: 29px;
+  }
+
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .playerItem,
+  .placeholderItem {
+    grid-template-columns:
+      22px
+      36px
+      minmax(0, 1fr);
+  }
+
+  .statusArea {
+    grid-column: 1 / -1;
+
+    justify-content: flex-start;
+  }
+}

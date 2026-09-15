@@ -1,0 +1,44 @@
+.header {
+  height: 116px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 38px;
+  border-bottom: 1px solid #2a3039;
+  background: #11151a;
+}
+
+.header h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+}
+
+.month {
+  padding: 9px 14px;
+  border: 1px solid #2d3540;
+  border-radius: 8px;
+  background: #191e26;
+  color: #e9edf3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 800px) {
+  .header {
+    height: 90px;
+    padding: 0 20px;
+  }
+
+  .header h1 {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 520px) {
+  .month {
+    display: none;
+  }
+}

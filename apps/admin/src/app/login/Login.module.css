@@ -1,0 +1,480 @@
+.page {
+  min-height: 100vh;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(420px, 0.82fr)
+    minmax(520px, 1.18fr);
+
+  background: #0d1015;
+}
+
+/* =========================================
+   PAINEL ESQUERDO
+========================================= */
+
+.panel {
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 38px 64px;
+
+  background: #13171d;
+
+  border-right: 1px solid #2a3039;
+}
+
+/* =========================================
+   BRAND
+========================================= */
+
+.brand {
+  display: flex;
+  align-items: center;
+
+  gap: 16px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #00e889;
+
+  font-size: 26px;
+
+  box-shadow: 0 0 24px rgba(0, 232, 137, 0.22);
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.brandText h1 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.brandText span {
+  color: #95a5bd;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  letter-spacing: 1.5px;
+}
+
+/* =========================================
+   CONTEÚDO
+========================================= */
+
+.content {
+  width: 100%;
+  max-width: 450px;
+
+  margin: auto;
+}
+
+.heading {
+  margin-bottom: 36px;
+}
+
+.badge {
+  display: inline-flex;
+
+  padding: 7px 12px;
+  margin-bottom: 18px;
+
+  border: 1px solid rgba(0, 232, 137, 0.35);
+
+  border-radius: 999px;
+
+  background: rgba(0, 232, 137, 0.08);
+
+  color: #00e889;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: 1px;
+}
+
+.heading h2 {
+  margin: 0 0 12px;
+
+  color: #ffffff;
+
+  font-size: 36px;
+  line-height: 1.1;
+
+  font-weight: 800;
+}
+
+.heading p {
+  max-width: 390px;
+
+  margin: 0;
+
+  color: #93a1b7;
+
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* =========================================
+   FORMULÁRIO
+========================================= */
+
+.form {
+  display: flex;
+  flex-direction: column;
+
+  gap: 22px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+.formGroup label {
+  color: #dce3ec;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.formGroup input {
+  width: 100%;
+  height: 52px;
+
+  padding: 0 16px;
+
+  outline: none;
+
+  border: 1px solid #303743;
+
+  border-radius: 8px;
+
+  background: #191e26;
+
+  color: #ffffff;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.formGroup input::placeholder {
+  color: #667286;
+}
+
+.formGroup input:hover:not(:disabled) {
+  border-color: #3c4553;
+}
+
+.formGroup input:focus {
+  border-color: #00e889;
+
+  background: #1b2129;
+
+  box-shadow: 0 0 0 3px rgba(0, 232, 137, 0.1);
+}
+
+.formGroup input:disabled {
+  opacity: 0.65;
+
+  cursor: not-allowed;
+}
+
+/* =========================================
+   ERRO
+========================================= */
+
+.error {
+  padding: 12px 14px;
+
+  border: 1px solid rgba(255, 92, 103, 0.35);
+
+  border-radius: 8px;
+
+  background: rgba(255, 92, 103, 0.08);
+
+  color: #ff7a84;
+
+  font-size: 13px;
+}
+
+/* =========================================
+   BOTÃO
+========================================= */
+
+.submit {
+  height: 52px;
+
+  margin-top: 4px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #00e889;
+
+  color: #07130d;
+
+  font-weight: 800;
+
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+
+  box-shadow: 0 8px 25px rgba(0, 232, 137, 0.17);
+}
+
+.submit:hover:not(:disabled) {
+  background: #00cd79;
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 10px 30px rgba(0, 232, 137, 0.22);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+/* =========================================
+   FOOTER
+========================================= */
+
+.footer {
+  color: #657084;
+
+  font-size: 12px;
+}
+
+/* =========================================
+   LADO DIREITO
+========================================= */
+
+.visual {
+  position: relative;
+
+  overflow: hidden;
+
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+
+  padding: 80px;
+
+  background:
+    radial-gradient(
+      circle at 70% 30%,
+      rgba(0, 232, 137, 0.13),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 20% 85%,
+      rgba(0, 232, 137, 0.06),
+      transparent 30%
+    ),
+    #0d1015;
+}
+
+.visual::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  opacity: 0.06;
+
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+
+  background-size: 56px 56px;
+}
+
+.visualContent {
+  position: relative;
+
+  z-index: 2;
+
+  max-width: 620px;
+}
+
+.visualContent > span {
+  color: #00e889;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  letter-spacing: 2px;
+}
+
+.visualContent h2 {
+  margin: 22px 0;
+
+  color: #f7f9fc;
+
+  font-size: clamp(48px, 5vw, 76px);
+
+  line-height: 0.98;
+
+  letter-spacing: -3px;
+
+  font-weight: 800;
+}
+
+.visualContent p {
+  max-width: 500px;
+
+  margin: 0;
+
+  color: #8f9cb0;
+
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+/* =========================================
+   CÍRCULOS DECORATIVOS
+========================================= */
+
+.visualCircles {
+  position: absolute;
+
+  right: -100px;
+  bottom: -100px;
+
+  width: 400px;
+  height: 400px;
+
+  border-radius: 50%;
+
+  border: 1px solid rgba(0, 232, 137, 0.18);
+}
+
+.visualCircles::before,
+.visualCircles::after {
+  content: "";
+
+  position: absolute;
+
+  border-radius: 50%;
+
+  border: 1px solid rgba(0, 232, 137, 0.12);
+}
+
+.visualCircles::before {
+  inset: 60px;
+}
+
+.visualCircles::after {
+  inset: 120px;
+}
+
+/* =========================================
+   LOADING
+========================================= */
+
+.loading {
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 16px;
+
+  background: #0d1015;
+
+  color: #93a1b7;
+
+  font-size: 14px;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+
+  border: 3px solid #29313b;
+  border-top-color: #00e889;
+
+  border-radius: 50%;
+
+  animation: loadingRotation 0.8s linear infinite;
+}
+
+@keyframes loadingRotation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   RESPONSIVO
+========================================= */
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 30px 28px;
+
+    border-right: none;
+  }
+
+  .content {
+    margin: 80px auto;
+  }
+
+  .visual {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .panel {
+    padding: 24px 20px;
+  }
+
+  .content {
+    margin: 60px auto;
+  }
+
+  .heading h2 {
+    font-size: 30px;
+  }
+}
