@@ -59,6 +59,7 @@
   font-weight: 900;
 
   text-decoration: none;
+  cursor: pointer;
 
   transition:
     border-color 0.2s ease,

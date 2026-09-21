@@ -1,0 +1,311 @@
+import "dotenv/config";
+import { MongoClient, type Db, type WithId } from "mongodb";
+
+export type BookingStatus =
+  | "WAITING_PLAYERS"
+  | "PAYMENT_AVAILABLE"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export type PlayerStatus = "WAITING_PAYMENT" | "PAID" | "CANCELLED";
+
+export type User = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  passwordHash: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type AdminRole = "COMPLEX_ADMIN";
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  passwordHash: string;
+
+  role: AdminRole;
+
+  complexId: string;
+
+  isActive: boolean;
+
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Address = {
+  street: string;
+  number: string;
+  complement: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+};
+
+export type LeisureAreaBlock = {
+  id: string;
+  startTime: string;
+  endTime: string;
+  priceInCents: number;
+  isActive: boolean;
+};
+
+export type LeisureArea = {
+  id: string;
+  complexId: string;
+  slug: string;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  blocks: LeisureAreaBlock[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type LeisureBookingStatus =
+  | "ACTIVE"
+  | "CANCELLED_NO_PARTICIPANTS"
+  | "CANCELLED_WITH_BOOKING";
+
+export type BookingLeisureArea = {
+  areaId: string;
+  areaSlug: string;
+  areaName: string;
+  blockId: string;
+  startTime: string;
+  endTime: string;
+  priceInCents: number;
+};
+
+export type ComplexCourtReference = {
+  id: string;
+  slug: string;
+  name: string;
+  type: string;
+};
+
+export type Complex = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  location: string;
+  phone: string | null;
+  whatsapp: string | null;
+  address: Address;
+
+  courts: ComplexCourtReference[];
+
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Court = {
+  id: string;
+
+  complexId: string;
+  complexSlug: string;
+
+  slug: string;
+  name: string;
+  type: string;
+  surface: string;
+  location: string;
+
+  priceInCents: number;
+  players: number;
+
+  highlight: string;
+  description: string;
+  imageUrl: string;
+  times: string[];
+
+  isActive: boolean;
+
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type BookingPlayer = {
+  id: string;
+  bookingId: string;
+  userId: string;
+  name: string;
+  phone: string;
+  email: string;
+  teamNumber: number;
+  status: PlayerStatus;
+  amountToPayInCents: number;
+  pixCopyPaste: string;
+  paidAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  participatesInLeisure?: boolean;
+
+  courtShareInCents?: number;
+
+  leisureShareInCents?: number;
+
+  courtPlatformFeeInCents?: number;
+
+  leisurePlatformFeeInCents?: number;
+};
+
+export type Booking = {
+  id: string;
+  shareCode: string;
+
+  captainUserId: string;
+  captainName: string;
+
+  courtSlug: string;
+  courtName: string;
+  courtType: string;
+  location: string;
+
+  bookingDate: string;
+  startTime: string;
+
+  courtPriceInCents: number;
+  goalkeeperPriceInCents: number;
+  totalPriceInCents: number;
+  expectedPlayers: number;
+
+  teamOneName: string;
+  teamTwoName: string;
+
+  platformFeeInCents: number;
+  bookingStatus: BookingStatus;
+
+  // Reserva ocupa ou não o slot da quadra.
+  slotActive: boolean;
+
+  createdAt: Date;
+  updatedAt: Date;
+  complexId?: string;
+
+  leisureArea?: BookingLeisureArea | null;
+
+  leisureStatus?: LeisureBookingStatus | null;
+
+  leisureSlotActive?: boolean;
+
+  pricingFrozenAt?: Date | null;
+};
+
+export type BookingWithPlayers = Booking & {
+  players: BookingPlayer[];
+};
+
+let client: MongoClient | null = null;
+let db: Db | null = null;
+
+const mongoUrl = process.env.MONGODB_URI || "mongodb://localhost:27017";
+const databaseName = process.env.MONGODB_DATABASE || "jogajunto";
+
+export async function connectDatabase() {
+  if (db) {
+    return db;
+  }
+
+  client = new MongoClient(mongoUrl);
+  await client.connect();
+
+  db = client.db(databaseName);
+  await createIndexes(db);
+
+  console.log(`MongoDB conectado: ${databaseName}`);
+
+  return db;
+}
+
+async function createIndexes(database: Db) {
+  await database
+    .collection<User>("users")
+    .createIndex({ email: 1 }, { unique: true });
+
+  await database
+    .collection<Complex>("complexes")
+    .createIndex({ slug: 1 }, { unique: true });
+
+  await database
+    .collection<Court>("courts")
+    .createIndex({ slug: 1 }, { unique: true });
+
+  await database
+    .collection<Court>("courts")
+    .createIndex({ complexId: 1, isActive: 1 });
+
+  await database
+    .collection<Booking>("bookings")
+    .createIndex({ shareCode: 1 }, { unique: true });
+
+  await database
+    .collection<AdminUser>("adminUsers")
+    .createIndex({ email: 1 }, { unique: true });
+
+  await database
+    .collection<AdminUser>("adminUsers")
+    .createIndex({ complexId: 1 });
+
+  await database.collection<Booking>("bookings").createIndex(
+    {
+      courtSlug: 1,
+      bookingDate: 1,
+      startTime: 1,
+    },
+    {
+      unique: true,
+      partialFilterExpression: {
+        slotActive: true,
+      },
+      name: "uniq_active_booking_slot",
+    },
+  );
+
+  await database.collection<BookingPlayer>("bookingPlayers").createIndex(
+    {
+      bookingId: 1,
+      userId: 1,
+    },
+    { unique: true },
+  );
+
+  await database
+    .collection<BookingPlayer>("bookingPlayers")
+    .createIndex({ bookingId: 1, createdAt: 1 });
+}
+
+export async function getCollections() {
+  const database = await connectDatabase();
+
+  return {
+    users: database.collection<User>("users"),
+    complexes: database.collection<Complex>("complexes"),
+    courts: database.collection<Court>("courts"),
+    bookings: database.collection<Booking>("bookings"),
+    bookingPlayers: database.collection<BookingPlayer>("bookingPlayers"),
+    adminUsers: database.collection<AdminUser>("adminUsers"),
+  };
+}
+
+export function withoutMongoId<T extends { _id?: unknown }>(
+  document: WithId<T>,
+): T {
+  const { _id, ...rest } = document;
+  return rest as T;
+}
+
+export function withoutMongoIds<T extends { _id?: unknown }>(
+  documents: WithId<T>[],
+): T[] {
+  return documents.map(withoutMongoId);
+}

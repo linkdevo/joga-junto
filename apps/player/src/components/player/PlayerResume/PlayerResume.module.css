@@ -1,4 +1,6 @@
 .section {
+  position: relative;
+
   padding: 42px 0 30px;
 
   background: transparent;
@@ -314,4 +316,104 @@
   color: #00e991;
   background: rgba(0, 233, 145, 0.1);
   border: 1px solid rgba(0, 233, 145, 0.24);
+}
+
+.authModalOverlay {
+  position: fixed;
+  top: 72px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+
+  display: grid;
+  place-items: center;
+
+  padding: 24px;
+
+  background: rgba(3, 8, 13, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.authModal {
+  width: min(420px, 100%);
+
+  padding: 28px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+
+  background: #101720;
+
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.44);
+}
+
+.authModalEyebrow {
+  color: #00e991;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.authModal h2 {
+  margin: 10px 0 0;
+
+  color: #f8fafc;
+
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.authModal p {
+  margin: 12px 0 0;
+
+  color: #9aa8bb;
+
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.authModalActions {
+  margin-top: 22px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 12px;
+}
+
+.authModalPrimaryButton,
+.authModalSecondaryButton {
+  min-height: 48px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 16px;
+
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 900;
+
+  text-align: center;
+  text-decoration: none;
+}
+
+.authModalPrimaryButton {
+  background: #00e991;
+
+  color: #04100b;
+}
+
+.authModalSecondaryButton {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+
+  color: #f5f8fc;
+  background: rgba(255, 255, 255, 0.03);
 }

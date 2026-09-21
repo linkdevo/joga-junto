@@ -38,20 +38,25 @@ export function PlayerResume() {
 
     setStoredUser(user);
 
-    if (!token) {
-      router.replace("/login");
+    if (!token || !user) {
+      setDashboard(null);
+      setIsLoading(false);
       return;
     }
 
+    const sessionToken = token;
+
     async function loadDashboard() {
       try {
-        const data = await getPlayerDashboard(token);
+        const data = await getPlayerDashboard(sessionToken);
         setDashboard(data);
         setError("");
       } catch (err) {
         if (err instanceof PlayerApiError && err.status === 401) {
           clearSession();
-          router.replace("/login");
+          setStoredUser(null);
+          setDashboard(null);
+          setError("");
           return;
         }
 
@@ -88,6 +93,7 @@ export function PlayerResume() {
 
   const playerName = dashboard?.user.name ?? storedUser?.name ?? "Atleta";
   const nextGame = dashboard?.nextGame;
+  const shouldShowAuthModal = !isLoading && !storedUser;
 
   return (
     <section className={styles.section}>
@@ -108,21 +114,23 @@ export function PlayerResume() {
             </div>
           </div>
 
-          <div className={styles.actions}>
-            <Link href="#quadras" className={styles.reserveButton}>
-              <Plus size={21} />
-              Fazer nova reserva de quadra
-            </Link>
+          {storedUser && (
+            <div className={styles.actions}>
+              <Link href="#quadras" className={styles.reserveButton}>
+                <Plus size={21} />
+                Fazer nova reserva de quadra
+              </Link>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={styles.logoutButton}
-            >
-              <LogOut size={18} />
-              Sair
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className={styles.logoutButton}
+              >
+                <LogOut size={18} />
+                Sair
+              </button>
+            </div>
+          )}
         </div>
 
         <div className={styles.cards}>
@@ -182,6 +190,39 @@ export function PlayerResume() {
 
         {error && <p className={styles.errorMessage}>{error}</p>}
       </div>
+
+      {shouldShowAuthModal && (
+        <div className={styles.authModalOverlay}>
+          <div
+            className={styles.authModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="player-auth-modal-title"
+          >
+            <span className={styles.authModalEyebrow}>Área do atleta</span>
+
+            <h2 id="player-auth-modal-title">Entre para continuar</h2>
+
+            <p>
+              Faça login ou crie uma conta para organizar jogos, reservar
+              quadras e acompanhar seus times.
+            </p>
+
+            <div className={styles.authModalActions}>
+              <Link href="/login" className={styles.authModalPrimaryButton}>
+                Fazer login
+              </Link>
+
+              <Link
+                href="/cadastro"
+                className={styles.authModalSecondaryButton}
+              >
+                Criar conta
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

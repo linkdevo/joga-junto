@@ -1,0 +1,436 @@
+.page {
+  min-height: calc(100vh - 72px);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(430px, 0.86fr);
+
+  background:
+    radial-gradient(
+      circle at 22% 18%,
+      rgba(0, 233, 145, 0.11),
+      transparent 30%
+    ),
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    #060b11;
+
+  background-size:
+    auto,
+    38px 38px,
+    38px 38px,
+    auto;
+}
+
+.formColumn {
+  min-height: calc(100vh - 72px);
+
+  display: grid;
+  place-items: center;
+
+  padding: 54px 32px;
+}
+
+.formPanel {
+  width: min(100%, 520px);
+
+  padding: 0;
+}
+
+.formHeader {
+  text-align: center;
+}
+
+.brandMark {
+  width: 52px;
+  height: 52px;
+
+  display: inline-grid;
+  place-items: center;
+
+  border: 1px solid rgba(0, 233, 145, 0.22);
+  border-radius: 16px;
+
+  background: rgba(0, 233, 145, 0.1);
+
+  font-size: 25px;
+
+  box-shadow: 0 18px 60px rgba(0, 233, 145, 0.1);
+}
+
+.eyebrow {
+  display: block;
+
+  margin-top: 24px;
+
+  color: #00e991;
+
+  font-size: 12px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+.formHeader h1 {
+  margin: 12px 0 0;
+
+  color: #f8fafc;
+
+  font-size: 48px;
+  line-height: 1.02;
+  font-weight: 950;
+}
+
+.formHeader p {
+  width: min(100%, 430px);
+
+  margin: 16px auto 0;
+
+  color: #94a3b8;
+
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.fields {
+  margin-top: 36px;
+
+  display: grid;
+
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+
+  gap: 8px;
+}
+
+.field > span {
+  color: #dbe5f0;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inputWrap {
+  min-height: 58px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 0 17px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+
+  background: rgba(16, 23, 32, 0.88);
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.inputWrap:focus-within {
+  border-color: rgba(0, 233, 145, 0.58);
+
+  background: rgba(18, 28, 39, 0.96);
+
+  box-shadow: 0 0 0 4px rgba(0, 233, 145, 0.1);
+}
+
+.inputWrap svg {
+  flex-shrink: 0;
+
+  color: #00e991;
+}
+
+.inputWrap input {
+  width: 100%;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: #f8fafc;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.inputWrap input::placeholder {
+  color: #64748b;
+}
+
+.error {
+  margin: 14px 0 0;
+
+  color: #fca5a5;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  text-align: center;
+}
+
+.submitButton {
+  width: 100%;
+  min-height: 58px;
+
+  margin-top: 24px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  border-radius: 12px;
+
+  background: #00e991;
+  color: #04100b;
+
+  font-size: 15px;
+  font-weight: 950;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 0 28px rgba(0, 233, 145, 0.22),
+    0 18px 44px rgba(0, 0, 0, 0.22);
+
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.submitButton:hover {
+  transform: translateY(-1px);
+
+  background: #1af2a0;
+
+  box-shadow:
+    0 0 34px rgba(0, 233, 145, 0.28),
+    0 22px 52px rgba(0, 0, 0, 0.28);
+}
+
+.submitButton:disabled {
+  opacity: 0.68;
+
+  cursor: wait;
+}
+
+.switchText {
+  margin: 18px 0 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+  flex-wrap: wrap;
+
+  color: #94a3b8;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.switchText a {
+  color: #00e991;
+
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.switchText a:hover {
+  text-decoration: underline;
+}
+
+.visualPanel {
+  position: relative;
+
+  min-height: calc(100vh - 72px);
+
+  display: flex;
+  align-items: flex-end;
+
+  overflow: hidden;
+
+  padding: 52px;
+
+  background:
+    linear-gradient(180deg, rgba(4, 10, 15, 0.18), rgba(4, 10, 15, 0.9)),
+    linear-gradient(90deg, rgba(0, 233, 145, 0.2), transparent 45%),
+    url("https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=1200&q=85");
+
+  background-position: center;
+  background-size: cover;
+}
+
+.visualPanel::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+
+  background-size: 42px 42px;
+
+  mask-image: linear-gradient(180deg, transparent 0%, #000 24%);
+}
+
+.visualContent {
+  position: relative;
+  z-index: 2;
+
+  max-width: 430px;
+}
+
+.visualBadge {
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 34px;
+
+  padding: 0 14px;
+
+  border: 1px solid rgba(0, 233, 145, 0.32);
+  border-radius: 999px;
+
+  background: rgba(0, 233, 145, 0.13);
+
+  color: #91ffbd;
+
+  font-size: 12px;
+  font-weight: 950;
+
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.visualContent h2 {
+  margin: 16px 0 0;
+
+  color: #ffffff;
+
+  font-size: 56px;
+  line-height: 1.02;
+  font-weight: 950;
+}
+
+.visualStats {
+  margin-top: 26px;
+
+  display: grid;
+
+  gap: 12px;
+}
+
+.visualStats span {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 9px;
+
+  color: #dff8ea;
+
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.visualStats svg {
+  color: #00e991;
+}
+
+.patternGrid {
+  position: absolute;
+  top: 36px;
+  right: 34px;
+  z-index: 1;
+
+  width: min(42vw, 360px);
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 14px;
+
+  opacity: 0.82;
+}
+
+.patternGrid span {
+  aspect-ratio: 1;
+
+  border-radius: 0 0 4px 0;
+
+  background: linear-gradient(135deg, transparent 49%, #00e991 50%);
+}
+
+@media (max-width: 1050px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .visualPanel {
+    min-height: 320px;
+
+    order: -1;
+
+    padding: 36px 32px;
+  }
+
+  .formColumn {
+    min-height: auto;
+
+    padding: 42px 24px 56px;
+  }
+
+  .patternGrid {
+    width: min(48vw, 280px);
+  }
+
+  .visualContent h2 {
+    font-size: 46px;
+  }
+}
+
+@media (max-width: 640px) {
+  .visualPanel {
+    min-height: 260px;
+
+    padding: 28px 20px;
+  }
+
+  .visualContent h2 {
+    font-size: 34px;
+  }
+
+  .patternGrid {
+    width: 180px;
+
+    gap: 9px;
+
+    opacity: 0.45;
+  }
+
+  .formColumn {
+    padding: 34px 18px 48px;
+  }
+
+  .formHeader h1 {
+    font-size: 34px;
+  }
+
+  .inputWrap,
+  .submitButton {
+    min-height: 54px;
+  }
+}
