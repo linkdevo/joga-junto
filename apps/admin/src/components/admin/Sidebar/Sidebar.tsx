@@ -4,10 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   CalendarDays,
+  CircleDollarSign,
   CircleDot,
   CircleUserRound,
+  Flame,
   LayoutDashboard,
   LogOut,
+  Package,
+  Wallet,
 } from "lucide-react";
 
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -29,6 +33,26 @@ const navigation = [
     href: "/quadras",
     label: "Quadras & Preços",
     icon: CircleDot,
+  },
+  {
+    href: "/areas-de-lazer",
+    label: "Áreas de Lazer",
+    icon: Flame,
+  },
+  {
+    href: "/financeiro",
+    label: "Financeiro & Custos",
+    icon: CircleDollarSign,
+  },
+  {
+    href: "/carteira",
+    label: "Carteira & Pix",
+    icon: Wallet,
+  },
+  {
+    href: "/estoque",
+    label: "Estoque do Bar",
+    icon: Package,
   },
 ] as const;
 

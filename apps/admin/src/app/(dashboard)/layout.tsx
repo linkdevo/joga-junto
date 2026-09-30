@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { AdminAuthGate } from "@/components/admin/AdminAuthGate/AdminAuthGate";
 import { AdminShell } from "@/components/admin/AdminShell/AdminShell";
+import { AdminMonthProvider } from "@/contexts/AdminMonthContext";
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -12,7 +13,9 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   return (
     <AdminAuthGate>
-      <AdminShell>{children}</AdminShell>
+      <AdminMonthProvider>
+        <AdminShell>{children}</AdminShell>
+      </AdminMonthProvider>
     </AdminAuthGate>
   );
 }

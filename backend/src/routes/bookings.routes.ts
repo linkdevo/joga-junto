@@ -1,13 +1,18 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router } from "express";
+
+import type { NextFunction, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 
 import {
   getCollections,
   withoutMongoId,
   withoutMongoIds,
+  type Address,
   type Booking,
+  type BookingLeisureArea,
   type BookingPlayer,
   type BookingStatus,
   type PlayerStatus,
@@ -26,12 +31,19 @@ import {
   publishAvailabilityEvent,
   subscribeAvailability,
 } from "../realtime/availability-events";
+import { getRouteParam } from "../utils/route-params";
+
+import { withBookingLock } from "../utils/keyed-lock";
+
+import { finalizeBookingPricing } from "../services/finalize-booking-pricing";
+import { ensureComplexesGeocoded } from "../services/ensure-complex-coordinates";
 
 const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
 const PLAYER_PLATFORM_FEE_IN_CENTS = 100;
+const LEISURE_PLATFORM_FEE_IN_CENTS = 100;
 
 type AuthenticatedRequest = Request & {
   userId?: string;
@@ -85,8 +97,14 @@ function authenticate(
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
+      userId?: unknown;
     };
+
+    if (typeof decoded.userId !== "string" || !decoded.userId) {
+      return response.status(401).json({
+        message: "Token inválido.",
+      });
+    }
 
     request.userId = decoded.userId;
 
@@ -142,6 +160,23 @@ function isDuplicateKeyError(error: unknown) {
   );
 }
 
+function isLeisureSlotDuplicateError(error: unknown) {
+  if (!isDuplicateKeyError(error)) {
+    return false;
+  }
+
+  const duplicateError = error as {
+    keyPattern?: Record<string, unknown>;
+    message?: string;
+  };
+
+  if (duplicateError.keyPattern?.["leisureArea.areaId"]) {
+    return true;
+  }
+
+  return duplicateError.message?.includes("uniq_active_leisure_slot") ?? false;
+}
+
 /**
  * Normaliza número positivo.
  */
@@ -166,10 +201,18 @@ router.get(
   authenticate,
   async (request: AuthenticatedRequest, response) => {
     try {
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
       const { users, bookings, bookingPlayers } = await getCollections();
 
       const user = await users.findOne({
-        id: request.userId,
+        id: userId,
       });
 
       if (!user) {
@@ -180,7 +223,7 @@ router.get(
 
       const playerEntries = await bookingPlayers
         .find({
-          userId: request.userId,
+          userId,
           status: {
             $ne: "CANCELLED",
           },
@@ -255,6 +298,281 @@ router.get(
 
 /**
  * ============================================================
+ * PERFIL DO JOGADOR
+ * ============================================================
+ */
+
+router.get(
+  "/player/me",
+  authenticate,
+  async (request: AuthenticatedRequest, response) => {
+    try {
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
+      const { users } = await getCollections();
+
+      const user = await users.findOne({
+        id: userId,
+      });
+
+      if (!user) {
+        return response.status(401).json({
+          message: "Usuário não encontrado.",
+        });
+      }
+
+      return response.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          avatarUrl: user.avatarUrl ?? null,
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao carregar perfil do jogador:", error);
+
+      return response.status(500).json({
+        message: "Erro ao carregar perfil do jogador.",
+      });
+    }
+  },
+);
+
+const updatePlayerProfileSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, {
+        message: "Informe um nome válido.",
+      })
+      .optional(),
+
+    avatarUrl: z
+      .string()
+      .trim()
+      .url({
+        message: "Informe uma URL válida para a imagem.",
+      })
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      return Object.keys(data).length > 0;
+    },
+    {
+      message: "Informe pelo menos um campo para atualização.",
+    },
+  );
+
+router.patch(
+  "/player/me",
+  authenticate,
+  async (request: AuthenticatedRequest, response) => {
+    try {
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
+      const parsedBody = updatePlayerProfileSchema.safeParse(request.body);
+
+      if (!parsedBody.success) {
+        return response.status(400).json({
+          message: "Dados inválidos para atualizar o perfil.",
+          errors: parsedBody.error.issues.map((issue) => ({
+            field: issue.path.join("."),
+            message: issue.message,
+          })),
+        });
+      }
+
+      const data = parsedBody.data;
+
+      const { users } = await getCollections();
+
+      const updatedUser = await users.findOneAndUpdate(
+        {
+          id: userId,
+        },
+        {
+          $set: {
+            ...(data.name !== undefined
+              ? {
+                  name: data.name,
+                }
+              : {}),
+
+            ...(data.avatarUrl !== undefined
+              ? {
+                  avatarUrl: data.avatarUrl,
+                }
+              : {}),
+
+            updatedAt: new Date(),
+          },
+        },
+        {
+          returnDocument: "after",
+        },
+      );
+
+      if (!updatedUser) {
+        return response.status(404).json({
+          message: "Usuário não encontrado.",
+        });
+      }
+
+      return response.json({
+        message: "Perfil atualizado com sucesso.",
+        user: {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          phone: updatedUser.phone,
+          email: updatedUser.email,
+          avatarUrl: updatedUser.avatarUrl ?? null,
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar perfil do jogador:", error);
+
+      return response.status(500).json({
+        message: "Erro ao atualizar o perfil do jogador.",
+      });
+    }
+  },
+);
+
+/**
+ * ============================================================
+ * JOGOS DO JOGADOR (PRÓXIMOS E HISTÓRICO)
+ * ============================================================
+ */
+
+router.get(
+  "/player/me/games",
+  authenticate,
+  async (request: AuthenticatedRequest, response) => {
+    try {
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
+      const { bookings, bookingPlayers } = await getCollections();
+
+      const playerEntries = await bookingPlayers
+        .find({
+          userId,
+        })
+        .toArray();
+
+      const bookingIds = [
+        ...new Set(playerEntries.map((entry) => entry.bookingId)),
+      ];
+
+      if (bookingIds.length === 0) {
+        return response.json({
+          upcoming: [],
+          history: [],
+        });
+      }
+
+      const bookingDocuments = await bookings
+        .find({
+          id: {
+            $in: bookingIds,
+          },
+        })
+        .toArray();
+
+      const bookingsById = new Map(
+        bookingDocuments.map((booking) => [booking.id, booking]),
+      );
+
+      const currentDateTime = getCurrentDateTimeKey();
+
+      const games = playerEntries
+        .map((entry) => {
+          const booking = bookingsById.get(entry.bookingId);
+
+          if (!booking) {
+            return null;
+          }
+
+          return {
+            id: booking.id,
+            shareCode: booking.shareCode,
+            courtName: booking.courtName,
+            courtType: booking.courtType,
+            location: booking.location,
+            bookingDate: booking.bookingDate,
+            startTime: booking.startTime,
+            bookingStatus: booking.bookingStatus,
+            paymentStatus: entry.status,
+            amountToPayInCents: entry.amountToPayInCents,
+            teamNumber: entry.teamNumber,
+          };
+        })
+        .filter((game): game is NonNullable<typeof game> => game !== null);
+
+      const upcoming = games
+        .filter((game) => {
+          return (
+            game.bookingStatus !== "CANCELLED" &&
+            `${game.bookingDate} ${game.startTime}` >= currentDateTime
+          );
+        })
+        .sort((first, second) => {
+          return `${first.bookingDate} ${first.startTime}`.localeCompare(
+            `${second.bookingDate} ${second.startTime}`,
+          );
+        });
+
+      const history = games
+        .filter((game) => {
+          return (
+            game.bookingStatus === "CANCELLED" ||
+            `${game.bookingDate} ${game.startTime}` < currentDateTime
+          );
+        })
+        .sort((first, second) => {
+          return `${second.bookingDate} ${second.startTime}`.localeCompare(
+            `${first.bookingDate} ${first.startTime}`,
+          );
+        });
+
+      return response.json({
+        upcoming,
+        history,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar os jogos do jogador:", error);
+
+      return response.status(500).json({
+        message: "Erro ao carregar os jogos do jogador.",
+      });
+    }
+  },
+);
+
+/**
+ * ============================================================
  * AUTENTICAÇÃO
  * ============================================================
  */
@@ -313,6 +631,7 @@ router.post("/auth/register", async (request, response) => {
       email: normalizedEmail,
 
       passwordHash,
+      avatarUrl: null,
 
       createdAt: now,
       updatedAt: now,
@@ -330,6 +649,7 @@ router.post("/auth/register", async (request, response) => {
         name: user.name,
         phone: user.phone,
         email: user.email,
+        avatarUrl: user.avatarUrl,
       },
     });
   } catch (error) {
@@ -388,6 +708,7 @@ router.post("/auth/login", async (request, response) => {
         name: user.name,
         phone: user.phone,
         email: user.email,
+        avatarUrl: user.avatarUrl ?? null,
       },
     });
   } catch (error) {
@@ -454,12 +775,43 @@ router.get("/courts", async (request, response) => {
  * ============================================================
  */
 
+type PlayerCourtProjection = {
+  id: string;
+  slug: string;
+  name: string;
+  type: string;
+  surface: string;
+
+  priceInCents: number;
+  players: number;
+
+  highlight: string;
+  description: string;
+  imageUrl: string;
+  times: string[];
+
+  complex: {
+    id: string;
+    slug: string;
+    name: string;
+    description: string;
+    location: string;
+
+    address: Address;
+
+    leisureAreas: {
+      available: boolean;
+      count: number;
+    };
+  };
+};
+
 router.get("/player/courts", async (request, response) => {
   try {
     const { courts } = await getCollections();
 
     const playerCourts = await courts
-      .aggregate([
+      .aggregate<PlayerCourtProjection>([
         {
           $match: {
             isActive: true,
@@ -482,6 +834,70 @@ router.get("/player/courts", async (request, response) => {
         {
           $match: {
             "complex.isActive": true,
+          },
+        },
+
+        /*
+         * Busca quantas áreas de lazer ativas existem
+         * no complexo da quadra.
+         */
+        {
+          $lookup: {
+            from: "leisureAreas",
+
+            let: {
+              currentComplexId: "$complexId",
+            },
+
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      {
+                        $eq: ["$complexId", "$$currentComplexId"],
+                      },
+                      {
+                        $eq: ["$isActive", true],
+                      },
+                    ],
+                  },
+                },
+              },
+
+              /*
+               * A área precisa possuir ao menos
+               * um bloco de horário ativo.
+               */
+              {
+                $match: {
+                  blocks: {
+                    $elemMatch: {
+                      isActive: true,
+                    },
+                  },
+                },
+              },
+
+              {
+                $count: "total",
+              },
+            ],
+
+            as: "leisureAreaSummary",
+          },
+        },
+
+        {
+          $set: {
+            leisureAreaCount: {
+              $ifNull: [
+                {
+                  $arrayElemAt: ["$leisureAreaSummary.total", 0],
+                },
+                0,
+              ],
+            },
           },
         },
 
@@ -514,31 +930,40 @@ router.get("/player/courts", async (request, response) => {
               id: "$complex.id",
               slug: "$complex.slug",
               name: "$complex.name",
-
               description: "$complex.description",
-
               location: "$complex.location",
 
               address: {
                 street: "$complex.address.street",
-
                 number: "$complex.address.number",
-
                 complement: "$complex.address.complement",
-
                 neighborhood: "$complex.address.neighborhood",
-
                 city: "$complex.address.city",
-
                 state: "$complex.address.state",
-
                 zipCode: "$complex.address.zipCode",
+                latitude: "$complex.address.latitude",
+                longitude: "$complex.address.longitude",
+              },
+
+              leisureAreas: {
+                available: {
+                  $gt: ["$leisureAreaCount", 0],
+                },
+                count: "$leisureAreaCount",
               },
             },
           },
         },
       ])
       .toArray();
+
+    /*
+     * Complexos que ainda não têm latitude/longitude são
+     * geocodificados aqui (uma única vez, o resultado fica
+     * salvo no banco) para o filtro de "mais próximos" do
+     * app do jogador funcionar.
+     */
+    await ensureComplexesGeocoded(playerCourts);
 
     return response.json(playerCourts);
   } catch (error) {
@@ -629,6 +1054,230 @@ router.get(
 
       return response.status(500).json({
         message: "Erro ao buscar disponibilidade da quadra.",
+      });
+    }
+  },
+);
+
+/**
+ * ============================================================
+ * OPÇÕES DE RESERVA DA QUADRA E DAS ÁREAS DE LAZER
+ * ============================================================
+ */
+
+router.get(
+  "/player/courts/:courtSlug/booking-options",
+  async (request, response) => {
+    try {
+      const { courtSlug } = request.params;
+
+      const date =
+        typeof request.query.date === "string" ? request.query.date : "";
+
+      if (!isValidBookingDate(date)) {
+        return response.status(400).json({
+          message: "Informe uma data válida no formato YYYY-MM-DD.",
+        });
+      }
+
+      const { courts, complexes, leisureAreas, bookings } =
+        await getCollections();
+
+      /**
+       * ======================================================
+       * QUADRA
+       * ======================================================
+       */
+
+      const court = await courts.findOne({
+        slug: courtSlug,
+        isActive: true,
+      });
+
+      if (!court) {
+        return response.status(404).json({
+          message: "Quadra não encontrada.",
+        });
+      }
+
+      /**
+       * Confere se o complexo também está ativo.
+       */
+
+      const complex = await complexes.findOne({
+        id: court.complexId,
+        isActive: true,
+      });
+
+      if (!complex) {
+        return response.status(404).json({
+          message: "Complexo da quadra não encontrado ou desativado.",
+        });
+      }
+
+      /**
+       * Reservas ativas da quadra na data.
+       */
+
+      const courtBookingDocuments = await bookings
+        .find({
+          courtSlug: court.slug,
+          bookingDate: date,
+          slotActive: true,
+        })
+        .toArray();
+
+      const reservedCourtTimes = new Set(
+        courtBookingDocuments.map((booking) => booking.startTime),
+      );
+
+      const currentDateTime = getCurrentDateTimeKey();
+
+      const courtSlots = buildAvailabilitySlots({
+        times: Array.isArray(court.times) ? court.times : [],
+
+        reservedTimes: reservedCourtTimes,
+
+        date,
+
+        currentDateTime,
+      });
+
+      /**
+       * ======================================================
+       * ÁREAS DE LAZER
+       * ======================================================
+       */
+
+      const leisureAreaDocuments = await leisureAreas
+        .find({
+          complexId: court.complexId,
+          isActive: true,
+
+          blocks: {
+            $elemMatch: {
+              isActive: true,
+            },
+          },
+        })
+        .sort({
+          createdAt: 1,
+        })
+        .toArray();
+
+      const leisureAreaIds = leisureAreaDocuments.map((area) => area.id);
+
+      /**
+       * Busca reservas de qualquer churrasqueira
+       * do complexo na data selecionada.
+       */
+
+      const leisureBookingDocuments =
+        leisureAreaIds.length > 0
+          ? await bookings
+              .find({
+                bookingDate: date,
+                leisureSlotActive: true,
+
+                "leisureArea.areaId": {
+                  $in: leisureAreaIds,
+                },
+              })
+              .toArray()
+          : [];
+
+      /**
+       * Gera chaves no formato:
+       *
+       * areaId:blockId
+       */
+      const reservedLeisureBlocks = new Set(
+        leisureBookingDocuments
+          .filter(
+            (booking) =>
+              booking.leisureArea?.areaId && booking.leisureArea?.blockId,
+          )
+          .map(
+            (booking) =>
+              `${booking.leisureArea?.areaId}:${booking.leisureArea?.blockId}`,
+          ),
+      );
+
+      const formattedLeisureAreas = leisureAreaDocuments.map((area) => {
+        const activeBlocks = Array.isArray(area.blocks)
+          ? area.blocks.filter((block) => block.isActive)
+          : [];
+
+        const blocks = activeBlocks.map((block) => {
+          const reservationKey = `${area.id}:${block.id}`;
+
+          if (reservedLeisureBlocks.has(reservationKey)) {
+            return {
+              id: block.id,
+              startTime: block.startTime,
+              endTime: block.endTime,
+              priceInCents: block.priceInCents,
+              status: "RESERVED" as const,
+            };
+          }
+
+          if (isSlotInPast(date, block.startTime, currentDateTime)) {
+            return {
+              id: block.id,
+              startTime: block.startTime,
+              endTime: block.endTime,
+              priceInCents: block.priceInCents,
+              status: "UNAVAILABLE" as const,
+            };
+          }
+
+          return {
+            id: block.id,
+            startTime: block.startTime,
+            endTime: block.endTime,
+            priceInCents: block.priceInCents,
+            status: "AVAILABLE" as const,
+          };
+        });
+
+        return {
+          id: area.id,
+          slug: area.slug,
+          name: area.name,
+          description: area.description,
+          imageUrl: area.imageUrl,
+          blocks,
+        };
+      });
+
+      return response.status(200).json({
+        date,
+
+        complex: {
+          id: complex.id,
+          slug: complex.slug,
+          name: complex.name,
+        },
+
+        court: {
+          id: court.id,
+          slug: court.slug,
+          name: court.name,
+          type: court.type,
+          surface: court.surface,
+          priceInCents: court.priceInCents,
+          players: court.players,
+          slots: courtSlots,
+        },
+
+        leisureAreas: formattedLeisureAreas,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar opções da reserva:", error);
+
+      return response.status(500).json({
+        message:
+          "Erro interno ao buscar os horários da quadra e das áreas de lazer.",
       });
     }
   },
@@ -853,10 +1502,23 @@ router.post(
 
         teamOneName = "Time A",
         teamTwoName = "Time B",
+
+        /*
+         * Churrasqueira opcional:
+         *
+         * {
+         *   areaId: string,
+         *   blockId: string,
+         *   captainParticipates: boolean
+         * }
+         */
+        leisure = null,
       } = request.body;
 
       /**
-       * Validações básicas.
+       * ======================================================
+       * VALIDAÇÕES BÁSICAS
+       * ======================================================
        */
 
       if (!courtSlug) {
@@ -877,12 +1539,6 @@ router.post(
         });
       }
 
-      /**
-       * IMPORTANTE:
-       * Estas validações precisam ficar DENTRO
-       * da rota /bookings.
-       */
-
       if (!isValidBookingDate(String(bookingDate))) {
         return response.status(400).json({
           message: "Data da reserva inválida.",
@@ -897,9 +1553,9 @@ router.post(
 
       const expectedPlayersNumber = normalizePositiveNumber(expectedPlayers);
 
-      if (!expectedPlayersNumber) {
+      if (!expectedPlayersNumber || !Number.isInteger(expectedPlayersNumber)) {
         return response.status(400).json({
-          message: "Informe a quantidade de jogadores.",
+          message: "Informe uma quantidade inteira e positiva de jogadores.",
         });
       }
 
@@ -907,6 +1563,7 @@ router.post(
 
       if (
         !Number.isFinite(goalkeeperPriceNumber) ||
+        !Number.isInteger(goalkeeperPriceNumber) ||
         goalkeeperPriceNumber < 0
       ) {
         return response.status(400).json({
@@ -914,15 +1571,43 @@ router.post(
         });
       }
 
-      const { users, courts, bookings, bookingPlayers } =
+      /**
+       * Valida a estrutura enviada para a churrasqueira.
+       */
+
+      if (
+        leisure !== null &&
+        (typeof leisure !== "object" ||
+          typeof leisure.areaId !== "string" ||
+          !leisure.areaId.trim() ||
+          typeof leisure.blockId !== "string" ||
+          !leisure.blockId.trim() ||
+          typeof leisure.captainParticipates !== "boolean")
+      ) {
+        return response.status(400).json({
+          message: "Dados inválidos para reservar a área de lazer.",
+        });
+      }
+
+      const { users, courts, leisureAreas, bookings, bookingPlayers } =
         await getCollections();
 
       /**
-       * Jogador autenticado.
+       * ======================================================
+       * JOGADOR AUTENTICADO
+       * ======================================================
        */
 
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
       const user = await users.findOne({
-        id: request.userId,
+        id: userId,
       });
 
       if (!user) {
@@ -932,11 +1617,13 @@ router.post(
       }
 
       /**
-       * Quadra.
+       * ======================================================
+       * QUADRA
+       * ======================================================
        */
 
       const court = await courts.findOne({
-        slug: courtSlug,
+        slug: String(courtSlug),
         isActive: true,
       });
 
@@ -945,11 +1632,6 @@ router.post(
           message: "Quadra não encontrada.",
         });
       }
-
-      /**
-       * Verifica se o horário pertence
-       * aos horários configurados da quadra.
-       */
 
       const courtTimes = Array.isArray(court.times) ? court.times : [];
 
@@ -960,41 +1642,189 @@ router.post(
       }
 
       /**
-       * Verificação amigável antes do INSERT.
+       * Verificação amigável da quadra.
        *
-       * O índice UNIQUE do banco continua sendo
-       * a proteção real contra concorrência.
+       * O índice UNIQUE continua sendo a proteção
+       * definitiva contra concorrência.
        */
 
-      const existingBooking = await bookings.findOne({
-        courtSlug: String(courtSlug),
-
+      const existingCourtBooking = await bookings.findOne({
+        courtSlug: court.slug,
         bookingDate: String(bookingDate),
-
         startTime: String(startTime),
-
         slotActive: true,
       });
 
-      if (existingBooking) {
+      if (existingCourtBooking) {
         return response.status(409).json({
-          message: "Este horário já possui uma reserva.",
+          message: "Este horário da quadra já possui uma reserva.",
         });
       }
 
-      const now = new Date();
+      /**
+       * ======================================================
+       * CHURRASQUEIRA / ÁREA DE LAZER
+       * ======================================================
+       */
 
-      const totalPriceInCents = court.priceInCents + goalkeeperPriceNumber;
+      let selectedLeisureArea: BookingLeisureArea | null = null;
 
-      const amountToPayInCents =
-        Math.ceil(totalPriceInCents / expectedPlayersNumber) +
-        PLAYER_PLATFORM_FEE_IN_CENTS;
+      let captainParticipatesInLeisure = false;
 
-      const bookingStatus: BookingStatus =
-        expectedPlayersNumber <= 1 ? "PAYMENT_AVAILABLE" : "WAITING_PLAYERS";
+      if (leisure !== null) {
+        const area = await leisureAreas.findOne({
+          id: leisure.areaId.trim(),
+
+          /*
+           * Impede reservar uma churrasqueira
+           * pertencente a outro complexo.
+           */
+          complexId: court.complexId,
+
+          isActive: true,
+        });
+
+        if (!area) {
+          return response.status(404).json({
+            message: "Área de lazer não encontrada neste complexo.",
+          });
+        }
+
+        const selectedBlock = area.blocks.find(
+          (block) => block.id === leisure.blockId.trim() && block.isActive,
+        );
+
+        if (!selectedBlock) {
+          return response.status(404).json({
+            message:
+              "Bloco de horário da área de lazer não encontrado ou desativado.",
+          });
+        }
+
+        if (isSlotInPast(String(bookingDate), selectedBlock.startTime)) {
+          return response.status(400).json({
+            message:
+              "Não é possível reservar um bloco de horário que já passou.",
+          });
+        }
+
+        /**
+         * Verificação amigável antes do INSERT.
+         */
+
+        const existingLeisureBooking = await bookings.findOne({
+          bookingDate: String(bookingDate),
+
+          "leisureArea.areaId": area.id,
+          "leisureArea.blockId": selectedBlock.id,
+
+          leisureSlotActive: true,
+        });
+
+        if (existingLeisureBooking) {
+          return response.status(409).json({
+            message: "Este bloco da churrasqueira já possui uma reserva.",
+          });
+        }
+
+        /**
+         * Snapshot dos dados da churrasqueira.
+         *
+         * Alterações futuras no cadastro não modificam
+         * reservas que já foram criadas.
+         */
+
+        selectedLeisureArea = {
+          areaId: area.id,
+          areaSlug: area.slug,
+          areaName: area.name,
+
+          blockId: selectedBlock.id,
+
+          startTime: selectedBlock.startTime,
+          endTime: selectedBlock.endTime,
+
+          priceInCents: selectedBlock.priceInCents,
+        };
+
+        captainParticipatesInLeisure = leisure.captainParticipates;
+      }
 
       /**
-       * Reserva.
+       * ======================================================
+       * VALORES INICIAIS
+       * ======================================================
+       */
+
+      const now = new Date();
+
+      /*
+       * Este total continua representando somente:
+       *
+       * quadra + goleiros
+       *
+       * O valor da churrasqueira permanece separado.
+       */
+      const totalPriceInCents = court.priceInCents + goalkeeperPriceNumber;
+
+      const provisionalCourtShareInCents = Math.ceil(
+        totalPriceInCents / expectedPlayersNumber,
+      );
+
+      let captainCourtShareInCents = provisionalCourtShareInCents;
+
+      let captainLeisureShareInCents = 0;
+
+      let captainCourtFeeInCents = PLAYER_PLATFORM_FEE_IN_CENTS;
+
+      let captainLeisureFeeInCents = 0;
+
+      let bookingStatus: BookingStatus =
+        expectedPlayersNumber <= 1 ? "PAYMENT_AVAILABLE" : "WAITING_PLAYERS";
+
+      let pricingFrozenAt: Date | null =
+        expectedPlayersNumber <= 1 ? now : null;
+
+      let leisureStatus: "ACTIVE" | "CANCELLED_NO_PARTICIPANTS" | null =
+        selectedLeisureArea ? "ACTIVE" : null;
+
+      let leisureSlotActive = selectedLeisureArea !== null;
+
+      /**
+       * Caso exista apenas um jogador, o valor já pode
+       * ser fechado durante a criação.
+       */
+
+      if (expectedPlayersNumber === 1) {
+        captainCourtShareInCents = totalPriceInCents;
+
+        if (selectedLeisureArea && captainParticipatesInLeisure) {
+          captainLeisureShareInCents = selectedLeisureArea.priceInCents;
+
+          captainLeisureFeeInCents = LEISURE_PLATFORM_FEE_IN_CENTS;
+        }
+
+        /**
+         * Se o único jogador não participar,
+         * libera imediatamente a churrasqueira.
+         */
+        if (selectedLeisureArea && !captainParticipatesInLeisure) {
+          leisureStatus = "CANCELLED_NO_PARTICIPANTS";
+
+          leisureSlotActive = false;
+        }
+      }
+
+      const captainAmountToPayInCents =
+        captainCourtShareInCents +
+        captainLeisureShareInCents +
+        captainCourtFeeInCents +
+        captainLeisureFeeInCents;
+
+      /**
+       * ======================================================
+       * DOCUMENTO DA RESERVA
+       * ======================================================
        */
 
       const booking: Booking = {
@@ -1005,6 +1835,11 @@ router.post(
         captainUserId: user.id,
         captainName: user.name,
 
+        /*
+         * O complexo vem da quadra consultada no banco.
+         */
+        complexId: court.complexId,
+
         courtSlug: court.slug,
         courtName: court.name,
         courtType: court.type,
@@ -1012,11 +1847,9 @@ router.post(
         location: court.location,
 
         bookingDate: String(bookingDate),
-
         startTime: String(startTime),
 
         courtPriceInCents: court.priceInCents,
-
         goalkeeperPriceInCents: goalkeeperPriceNumber,
 
         totalPriceInCents,
@@ -1027,21 +1860,30 @@ router.post(
 
         teamTwoName: String(teamTwoName || "Time B").trim(),
 
+        /*
+         * Mantido por compatibilidade.
+         * Representa a taxa da quadra.
+         */
         platformFeeInCents: PLAYER_PLATFORM_FEE_IN_CENTS,
 
         bookingStatus,
 
-        /**
-         * Reserva ocupa o horário.
-         */
         slotActive: true,
+
+        leisureArea: selectedLeisureArea,
+        leisureStatus,
+        leisureSlotActive,
+
+        pricingFrozenAt,
 
         createdAt: now,
         updatedAt: now,
       };
 
       /**
-       * Capitão também participa da reserva.
+       * ======================================================
+       * CAPITÃO DA RESERVA
+       * ======================================================
        */
 
       const captainPlayer: BookingPlayer = {
@@ -1059,9 +1901,24 @@ router.post(
 
         status: "WAITING_PAYMENT",
 
-        amountToPayInCents,
+        participatesInLeisure:
+          selectedLeisureArea !== null && captainParticipatesInLeisure,
 
-        pixCopyPaste: `PIX-PLACEHOLDER-${booking.shareCode}-${user.id}-${amountToPayInCents}`,
+        courtShareInCents: captainCourtShareInCents,
+
+        leisureShareInCents: captainLeisureShareInCents,
+
+        courtPlatformFeeInCents: captainCourtFeeInCents,
+
+        leisurePlatformFeeInCents: captainLeisureFeeInCents,
+
+        amountToPayInCents: captainAmountToPayInCents,
+
+        pixCopyPaste:
+          `PIX-PLACEHOLDER-` +
+          `${booking.shareCode}-` +
+          `${user.id}-` +
+          `${captainAmountToPayInCents}`,
 
         paidAt: null,
 
@@ -1070,21 +1927,35 @@ router.post(
       };
 
       /**
-       * Rollback compensatório.
-       *
-       * Se criar a reserva mas falhar ao
-       * criar o capitão, remove a reserva.
+       * ======================================================
+       * INSERT E ROLLBACK COMPENSATÓRIO
+       * ======================================================
        */
 
       let bookingInserted = false;
 
       try {
+        /*
+         * Este único INSERT disputa os dois índices:
+         *
+         * 1. horário da quadra;
+         * 2. bloco da churrasqueira.
+         *
+         * Se qualquer recurso já estiver ocupado,
+         * o documento não será inserido.
+         */
         await bookings.insertOne(booking);
 
         bookingInserted = true;
 
         await bookingPlayers.insertOne(captainPlayer);
       } catch (error) {
+        /*
+         * Se a reserva foi criada, mas a criação
+         * do capitão falhou, remove a reserva.
+         *
+         * Isso também libera os dois horários.
+         */
         if (bookingInserted) {
           await bookings.deleteOne({
             id: booking.id,
@@ -1095,8 +1966,12 @@ router.post(
       }
 
       /**
-       * Informa via SSE que o horário
-       * acabou de ser reservado.
+       * Atualiza a disponibilidade da quadra
+       * pelo SSE já existente.
+       *
+       * O evento específico da churrasqueira
+       * será adicionado junto do frontend em
+       * tempo real.
        */
 
       publishAvailabilityEvent({
@@ -1111,26 +1986,38 @@ router.post(
 
       return response.status(201).json({
         ...booking,
-
         players: [captainPlayer],
       });
     } catch (error) {
       console.error("Erro ao criar reserva:", error);
 
       /**
-       * Caso duas pessoas reservem no
-       * mesmo instante, o índice UNIQUE
-       * será a proteção final.
+       * O índice da churrasqueira foi violado.
+       */
+
+      if (isLeisureSlotDuplicateError(error)) {
+        return response.status(409).json({
+          message:
+            "Este bloco da churrasqueira acabou de ser reservado por outro usuário.",
+        });
+      }
+
+      /**
+       * Outro índice UNIQUE foi violado.
+       *
+       * Na criação da reserva, normalmente será
+       * o índice do horário da quadra.
        */
 
       if (isDuplicateKeyError(error)) {
         return response.status(409).json({
-          message: "Este horário já possui uma reserva.",
+          message:
+            "Este horário da quadra acabou de ser reservado por outro usuário.",
         });
       }
 
       return response.status(500).json({
-        message: "Erro ao criar reserva.",
+        message: "Erro interno ao criar a reserva.",
       });
     }
   },
@@ -1144,7 +2031,13 @@ router.post(
 
 router.get("/bookings/share/:shareCode", async (request, response) => {
   try {
-    const { shareCode } = request.params;
+    const shareCode = getRouteParam(request.params.shareCode);
+
+    if (!shareCode) {
+      return response.status(400).json({
+        message: "O código da reserva não foi informado.",
+      });
+    }
 
     const { bookings } = await getCollections();
 
@@ -1237,12 +2130,26 @@ router.post(
   authenticate,
   async (request: AuthenticatedRequest, response) => {
     try {
-      const { shareCode } = request.params;
+      const shareCode = getRouteParam(request.params.shareCode);
+
+      if (!shareCode) {
+        return response.status(400).json({
+          message: "O código da reserva não foi informado.",
+        });
+      }
+
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
 
       const { users, bookings, bookingPlayers } = await getCollections();
 
       const user = await users.findOne({
-        id: request.userId,
+        id: userId,
       });
 
       if (!user) {
@@ -1251,130 +2158,180 @@ router.post(
         });
       }
 
-      const bookingDocument = await bookings.findOne({
+      const initialBookingDocument = await bookings.findOne({
         shareCode,
       });
 
-      if (!bookingDocument) {
+      if (!initialBookingDocument) {
         return response.status(404).json({
           message: "Reserva não encontrada.",
         });
       }
 
-      const booking = withoutMongoId(bookingDocument);
+      const initialBooking = withoutMongoId(initialBookingDocument);
 
-      /*
-       * Depois que todos os jogadores entram,
-       * a reserva muda para PAYMENT_AVAILABLE.
-       */
-      if (booking.bookingStatus !== "WAITING_PLAYERS") {
-        return response.status(400).json({
-          message: "Esta reserva não está mais aceitando jogadores.",
+      return withBookingLock(initialBooking.id, async () => {
+        /*
+         * Busca novamente dentro do bloqueio.
+         * O estado pode ter mudado enquanto
+         * a requisição aguardava.
+         */
+        const currentBookingDocument = await bookings.findOne({
+          id: initialBooking.id,
         });
-      }
 
-      const players = await getBookingPlayers(booking.id);
+        if (!currentBookingDocument) {
+          return response.status(404).json({
+            message: "Reserva não encontrada.",
+          });
+        }
 
-      const activePlayers = players.filter(
-        (player) => player.status !== "CANCELLED",
-      );
+        const booking = withoutMongoId(currentBookingDocument);
 
-      /*
-       * Evita o mesmo usuário entrar
-       * duas vezes na reserva.
-       */
-      const alreadyJoined = activePlayers.some(
-        (player) => player.userId === user.id,
-      );
+        if (
+          booking.bookingStatus !== "WAITING_PLAYERS" ||
+          booking.pricingFrozenAt
+        ) {
+          return response.status(409).json({
+            message: "Esta reserva não está mais aceitando jogadores.",
+          });
+        }
 
-      if (alreadyJoined) {
-        return response.status(409).json({
-          message: "Você já está confirmado nesta reserva.",
-        });
-      }
+        const hasActiveLeisure =
+          booking.leisureArea !== null &&
+          booking.leisureArea !== undefined &&
+          booking.leisureStatus === "ACTIVE" &&
+          booking.leisureSlotActive !== false;
 
-      /*
-       * Verifica lotação.
-       */
-      if (activePlayers.length >= booking.expectedPlayers) {
-        return response.status(409).json({
-          message: "A reserva já atingiu o número máximo de jogadores.",
-        });
-      }
-
-      const amountToPayInCents =
-        Math.ceil(booking.totalPriceInCents / booking.expectedPlayers) +
-        booking.platformFeeInCents;
-
-      const now = new Date();
-
-      const player: BookingPlayer = {
-        id: randomUUID(),
-
-        bookingId: booking.id,
-
-        userId: user.id,
-
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
+        const receivedParticipation = request.body?.participatesInLeisure;
 
         /*
-         * O campo continua existindo no banco
-         * por compatibilidade, mas não será mais
-         * usado visualmente nesta tela.
+         * Quando existe churrasqueira, o jogador
+         * precisa responder sim ou não.
          */
-        teamNumber: 1,
+        if (hasActiveLeisure && typeof receivedParticipation !== "boolean") {
+          return response.status(400).json({
+            message: "Informe se você participará do churrasco.",
+          });
+        }
 
-        status: "WAITING_PAYMENT",
+        /*
+         * Quando não existe churrasqueira,
+         * sempre força false.
+         */
+        const participatesInLeisure = hasActiveLeisure
+          ? receivedParticipation
+          : false;
 
-        amountToPayInCents,
+        const activePlayers = await bookingPlayers
+          .find({
+            bookingId: booking.id,
 
-        pixCopyPaste: `PIX-PLACEHOLDER-${booking.shareCode}-${user.id}-${amountToPayInCents}`,
-
-        paidAt: null,
-
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await bookingPlayers.insertOne(player);
-
-      const totalActivePlayers = await bookingPlayers.countDocuments({
-        bookingId: booking.id,
-
-        status: {
-          $ne: "CANCELLED",
-        },
-      });
-
-      /*
-       * Quando completar a quantidade esperada,
-       * libera a próxima etapa.
-       */
-      if (totalActivePlayers >= booking.expectedPlayers) {
-        await bookings.updateOne(
-          {
-            id: booking.id,
-          },
-          {
-            $set: {
-              bookingStatus: "PAYMENT_AVAILABLE",
-
-              updatedAt: new Date(),
+            status: {
+              $ne: "CANCELLED",
             },
-          },
+          })
+          .toArray();
+
+        const alreadyJoined = activePlayers.some(
+          (player) => player.userId === user.id,
         );
-      }
 
-      return response.status(201).json({
-        message: "Você entrou na reserva com sucesso.",
+        if (alreadyJoined) {
+          return response.status(409).json({
+            message: "Você já está confirmado nesta reserva.",
+          });
+        }
 
-        player,
+        if (activePlayers.length >= booking.expectedPlayers) {
+          return response.status(409).json({
+            message: "A reserva já atingiu o número máximo de jogadores.",
+          });
+        }
 
-        totalPlayers: totalActivePlayers,
+        const now = new Date();
 
-        expectedPlayers: booking.expectedPlayers,
+        /*
+         * Os valores ficam zerados enquanto
+         * o grupo não estiver completo.
+         *
+         * O serviço de finalização preencherá
+         * os valores definitivos.
+         */
+        const player: BookingPlayer = {
+          id: randomUUID(),
+
+          bookingId: booking.id,
+
+          userId: user.id,
+
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+
+          teamNumber: 1,
+
+          status: "WAITING_PAYMENT",
+
+          participatesInLeisure,
+
+          courtShareInCents: 0,
+          leisureShareInCents: 0,
+
+          courtPlatformFeeInCents: 0,
+          leisurePlatformFeeInCents: 0,
+
+          amountToPayInCents: 0,
+
+          pixCopyPaste: "",
+
+          paidAt: null,
+
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        await bookingPlayers.insertOne(player);
+
+        const totalActivePlayers = await bookingPlayers.countDocuments({
+          bookingId: booking.id,
+
+          status: {
+            $ne: "CANCELLED",
+          },
+        });
+
+        let updatedBooking = booking;
+
+        /*
+         * O último jogador fecha o grupo e
+         * dispara o rateio definitivo.
+         */
+        if (totalActivePlayers >= booking.expectedPlayers) {
+          updatedBooking = await finalizeBookingPricing(booking.id);
+        }
+
+        const savedPlayerDocument = await bookingPlayers.findOne({
+          id: player.id,
+        });
+
+        const savedPlayer = savedPlayerDocument
+          ? withoutMongoId(savedPlayerDocument)
+          : player;
+
+        return response.status(201).json({
+          message: "Você entrou na reserva com sucesso.",
+
+          player: savedPlayer,
+
+          totalPlayers: totalActivePlayers,
+
+          expectedPlayers: booking.expectedPlayers,
+
+          bookingStatus: updatedBooking.bookingStatus,
+
+          pricingFrozenAt: updatedBooking.pricingFrozenAt ?? null,
+        });
       });
     } catch (error) {
       console.error("Erro ao entrar na reserva:", error);
@@ -1386,7 +2343,143 @@ router.post(
       }
 
       return response.status(500).json({
-        message: "Erro ao entrar na reserva.",
+        message: "Erro interno ao entrar na reserva.",
+      });
+    }
+  },
+);
+
+/**
+ * ============================================================
+ * ALTERAR PARTICIPAÇÃO NA CHURRASQUEIRA
+ * ============================================================
+ */
+
+router.patch(
+  "/bookings/share/:shareCode/leisure-participation",
+  authenticate,
+  async (request: AuthenticatedRequest, response) => {
+    try {
+      const shareCode = getRouteParam(request.params.shareCode);
+
+      if (!shareCode) {
+        return response.status(400).json({
+          message: "O código da reserva não foi informado.",
+        });
+      }
+
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
+      const { participatesInLeisure } = request.body;
+
+      if (typeof participatesInLeisure !== "boolean") {
+        return response.status(400).json({
+          message: "Informe se você participará do churrasco.",
+        });
+      }
+
+      const { bookings, bookingPlayers } = await getCollections();
+
+      const initialBookingDocument = await bookings.findOne({
+        shareCode,
+      });
+
+      if (!initialBookingDocument) {
+        return response.status(404).json({
+          message: "Reserva não encontrada.",
+        });
+      }
+
+      const initialBooking = withoutMongoId(initialBookingDocument);
+
+      return withBookingLock(initialBooking.id, async () => {
+        const currentBookingDocument = await bookings.findOne({
+          id: initialBooking.id,
+        });
+
+        if (!currentBookingDocument) {
+          return response.status(404).json({
+            message: "Reserva não encontrada.",
+          });
+        }
+
+        const booking = withoutMongoId(currentBookingDocument);
+
+        const hasActiveLeisure =
+          booking.leisureArea !== null &&
+          booking.leisureArea !== undefined &&
+          booking.leisureStatus === "ACTIVE" &&
+          booking.leisureSlotActive !== false;
+
+        if (!hasActiveLeisure) {
+          return response.status(400).json({
+            message: "Esta reserva não possui uma churrasqueira ativa.",
+          });
+        }
+
+        if (
+          booking.bookingStatus !== "WAITING_PLAYERS" ||
+          booking.pricingFrozenAt
+        ) {
+          return response.status(409).json({
+            message:
+              "A participação não pode mais ser alterada porque os valores já foram calculados.",
+          });
+        }
+
+        const updatedPlayerDocument = await bookingPlayers.findOneAndUpdate(
+          {
+            bookingId: booking.id,
+            userId,
+
+            status: {
+              $ne: "CANCELLED",
+            },
+          },
+
+          {
+            $set: {
+              participatesInLeisure,
+
+              /*
+               * Os valores definitivos serão
+               * calculados somente no fechamento.
+               */
+              leisureShareInCents: 0,
+              leisurePlatformFeeInCents: 0,
+
+              updatedAt: new Date(),
+            },
+          },
+
+          {
+            returnDocument: "after",
+          },
+        );
+
+        if (!updatedPlayerDocument) {
+          return response.status(404).json({
+            message: "Você ainda não participa desta reserva.",
+          });
+        }
+
+        return response.status(200).json({
+          message: "Participação no churrasco atualizada com sucesso.",
+
+          player: withoutMongoId(updatedPlayerDocument),
+        });
+      });
+    } catch (error) {
+      console.error("Erro ao alterar participação:", error);
+
+      return response.status(500).json({
+        message: "Erro interno ao alterar a participação no churrasco.",
       });
     }
   },
@@ -1494,9 +2587,23 @@ router.get(
   authenticate,
   async (request: AuthenticatedRequest, response) => {
     try {
-      const { shareCode } = request.params;
+      const shareCode = getRouteParam(request.params.shareCode);
 
-      const { bookings } = await getCollections();
+      if (!shareCode) {
+        return response.status(400).json({
+          message: "O código da reserva não foi informado.",
+        });
+      }
+
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
+      const { bookings, bookingPlayers } = await getCollections();
 
       const bookingDocument = await bookings.findOne({
         shareCode,
@@ -1509,33 +2616,120 @@ router.get(
       }
 
       const booking = withoutMongoId(bookingDocument);
-      const players = await getBookingPlayers(booking.id);
 
-      const player = players.find(
-        (bookingPlayer) => bookingPlayer.userId === request.userId,
-      );
+      const playerDocument = await bookingPlayers.findOne({
+        bookingId: booking.id,
+        userId,
 
-      if (!player) {
+        status: {
+          $ne: "CANCELLED",
+        },
+      });
+
+      if (!playerDocument) {
         return response.status(400).json({
           message: "Você ainda não entrou nesta reserva.",
         });
       }
 
+      const player = withoutMongoId(playerDocument);
+
+      if (booking.bookingStatus === "CANCELLED") {
+        return response.json({
+          available: false,
+
+          playerId: player.id,
+          status: player.status,
+
+          amountToPayInCents: 0,
+          pixCopyPaste: "",
+
+          paidAt: player.paidAt ?? null,
+
+          message: "Esta reserva foi cancelada.",
+        });
+      }
+
+      /*
+       * Reserva antiga:
+       *
+       * não possuía leisureArea nem
+       * pricingFrozenAt.
+       */
+      const isLegacyBooking =
+        booking.leisureArea === undefined &&
+        booking.pricingFrozenAt === undefined;
+
+      const paymentAvailable =
+        booking.bookingStatus !== "WAITING_PLAYERS" &&
+        (isLegacyBooking || Boolean(booking.pricingFrozenAt));
+
+      if (!paymentAvailable) {
+        return response.json({
+          available: false,
+
+          playerId: player.id,
+          status: player.status,
+
+          courtShareInCents: 0,
+          leisureShareInCents: 0,
+
+          courtPlatformFeeInCents: 0,
+          leisurePlatformFeeInCents: 0,
+
+          amountToPayInCents: 0,
+          pixCopyPaste: "",
+
+          paidAt: player.paidAt ?? null,
+
+          message:
+            "O pagamento será liberado quando todos os jogadores confirmarem presença.",
+        });
+      }
+
+      /*
+       * Compatibilidade com jogadores antigos.
+       */
+
+      const courtPlatformFeeInCents =
+        player.courtPlatformFeeInCents ?? booking.platformFeeInCents ?? 0;
+
+      const leisurePlatformFeeInCents = player.leisurePlatformFeeInCents ?? 0;
+
+      const leisureShareInCents = player.leisureShareInCents ?? 0;
+
+      const courtShareInCents =
+        player.courtShareInCents ??
+        Math.max(player.amountToPayInCents - courtPlatformFeeInCents, 0);
+
       return response.json({
         available: true,
+
         playerId: player.id,
         status: player.status,
+
+        participatesInLeisure: player.participatesInLeisure ?? false,
+
+        courtShareInCents,
+        leisureShareInCents,
+
+        courtPlatformFeeInCents,
+        leisurePlatformFeeInCents,
+
         amountToPayInCents: player.amountToPayInCents,
+
         pixCopyPaste: player.pixCopyPaste,
+
         paidAt: player.paidAt ?? null,
+
         message:
           "Pagamento ainda está em modo mock. O QR Code exibido é ilustrativo.",
       });
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao buscar pagamento:", error);
 
       return response.status(500).json({
-        message: "Erro ao buscar pagamento.",
+        message: "Erro interno ao buscar o pagamento.",
       });
     }
   },
@@ -1555,11 +2749,19 @@ router.get(
   authenticate,
   async (request: AuthenticatedRequest, response) => {
     try {
+      const userId = request.userId;
+
+      if (!userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
+
       const { bookings, bookingPlayers } = await getCollections();
 
       const userBookingPlayers = await bookingPlayers
         .find({
-          userId: request.userId,
+          userId,
         })
         .toArray();
 
@@ -1592,7 +2794,7 @@ router.get(
           return {
             ...bookingWithPlayers,
 
-            isCaptain: booking.captainUserId === request.userId,
+            isCaptain: booking.captainUserId === userId,
           };
         }),
       );

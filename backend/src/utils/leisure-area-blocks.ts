@@ -17,17 +17,13 @@ type InvalidBlocksResult = {
 };
 
 export type ValidateLeisureBlocksResult =
-  | ValidBlocksResult
-  | InvalidBlocksResult;
+  ValidBlocksResult | InvalidBlocksResult;
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-export function timeToMinutes(value: string) {
-  if (!TIME_REGEX.test(value)) {
-    return null;
-  }
-
-  const [hours, minutes] = value.split(":").map(Number);
+function timeToMinutes(value: string) {
+  const hours = Number(value.slice(0, 2));
+  const minutes = Number(value.slice(3, 5));
 
   return hours * 60 + minutes;
 }
@@ -50,6 +46,10 @@ export function validateLeisureBlocks(
 
   for (let index = 0; index < sortedBlocks.length; index += 1) {
     const currentBlock = sortedBlocks[index];
+
+    if (!currentBlock) {
+      continue;
+    }
 
     if (receivedIds.has(currentBlock.id)) {
       return {

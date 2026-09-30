@@ -458,6 +458,178 @@
   cursor: wait;
 }
 
+.leisurePanel {
+  margin-top: 20px;
+  padding: 24px;
+  border-radius: 18px;
+  background: #182235;
+  border: 1px solid rgba(255, 191, 71, 0.16);
+}
+
+.leisureToggle {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  cursor: pointer;
+}
+
+.leisureToggle > input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #00df9a;
+}
+
+.toggleIcon {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 11px;
+  color: #ffbf47;
+  background: rgba(255, 191, 71, 0.1);
+}
+
+.leisureToggle strong,
+.leisureToggle small {
+  display: block;
+}
+
+.leisureToggle strong {
+  color: #f8fafc;
+  font-size: 16px;
+}
+
+.leisureToggle small {
+  margin-top: 4px;
+  color: #8d9aae;
+  font-size: 12px;
+}
+
+.leisureContent {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.leisureHeading {
+  margin: 20px 0 12px;
+  color: #dbe4ef;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.leisureHeading:first-child {
+  margin-top: 0;
+}
+
+.areaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.areaButton {
+  min-height: 76px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #101a2a;
+  color: #8f9caf;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.areaButton svg {
+  flex-shrink: 0;
+  color: #ffbf47;
+}
+
+.areaButton strong,
+.areaButton small {
+  display: block;
+}
+
+.areaButton strong {
+  color: #f5f8fc;
+  font-size: 14px;
+}
+
+.areaButton small {
+  margin-top: 5px;
+  color: #8d9aae;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.areaSelected {
+  border-color: #00df9a;
+  background: rgba(0, 223, 154, 0.08);
+}
+
+.blockGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(125px, 1fr));
+  gap: 10px;
+}
+
+.leisureBlock {
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font: inherit;
+}
+
+.leisureBlock strong {
+  font-size: 15px;
+}
+
+.leisureBlock span {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.participationChoice {
+  margin: 22px 0 0;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #101a2a;
+}
+
+.participationChoice legend {
+  padding: 0 7px;
+  color: #f3f6fa;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.radioOption {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 22px;
+  color: #a8b4c5;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.radioOption input {
+  accent-color: #00df9a;
+}
+
 @media (max-width: 900px) {
   .overlay {
     padding: 12px;
@@ -473,6 +645,14 @@
 
   .confirmation {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .areaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .blockGrid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
   }
 }
 
@@ -512,5 +692,18 @@
 
   .confirmButton {
     width: 100%;
+  }
+
+  .leisurePanel {
+    padding: 18px;
+  }
+
+  .blockGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .radioOption {
+    width: 100%;
+    margin-right: 0;
   }
 }

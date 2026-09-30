@@ -2,14 +2,39 @@ import type {
   AvailabilityEvent,
   CourtAvailability,
   CreateBookingInput,
-  CreatedBooking,
   BookingDetails,
   JoinBookingResponse,
   BookingPaymentInfo,
+  BookingOptions,
+  BookingPlayer,
 } from "@/types/booking";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
 
+export async function getBookingOptions(
+  courtSlug: string,
+  date: string,
+): Promise<BookingOptions> {
+  const response = await fetch(
+    `${API_URL}/player/courts/${encodeURIComponent(
+      courtSlug,
+    )}/booking-options?date=${encodeURIComponent(date)}`,
+    {
+      cache: "no-store",
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new BookingApiError(
+      data?.message ?? "Não foi possível carregar as opções da reserva.",
+      response.status,
+    );
+  }
+
+  return data;
+}
 export class BookingApiError extends Error {
   status: number;
 
@@ -40,16 +65,25 @@ export async function getBookingByShareCode(
 export async function joinBooking(
   shareCode: string,
   token: string,
-): Promise<void> {
+  participatesInLeisure?: boolean,
+): Promise<JoinBookingResponse> {
   const response = await fetch(
     `${API_URL}/bookings/share/${shareCode}/players`,
     {
       method: "POST",
+
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({}),
+
+      body: JSON.stringify({
+        ...(typeof participatesInLeisure === "boolean"
+          ? {
+              participatesInLeisure,
+            }
+          : {}),
+      }),
     },
   );
 
@@ -58,6 +92,41 @@ export async function joinBooking(
   if (!response.ok) {
     throw new Error(data?.message ?? "Não foi possível entrar na reserva.");
   }
+
+  return data;
+}
+
+export async function updateLeisureParticipation(
+  shareCode: string,
+  token: string,
+  participatesInLeisure: boolean,
+): Promise<BookingPlayer> {
+  const response = await fetch(
+    `${API_URL}/bookings/share/${shareCode}/leisure-participation`,
+    {
+      method: "PATCH",
+
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+
+      body: JSON.stringify({
+        participatesInLeisure,
+      }),
+    },
+  );
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ??
+        "Não foi possível alterar sua participação no churrasco.",
+    );
+  }
+
+  return data.player;
 }
 
 export async function getMyBookingPayment(
@@ -111,7 +180,7 @@ export async function getCourtAvailability(
 export async function createBooking(
   input: CreateBookingInput,
   token: string,
-): Promise<CreatedBooking> {
+): Promise<BookingDetails> {
   const response = await fetch(`${API_URL}/bookings`, {
     method: "POST",
 

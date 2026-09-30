@@ -95,6 +95,19 @@ export function PlayerResume() {
   const nextGame = dashboard?.nextGame;
   const shouldShowAuthModal = !isLoading && !storedUser;
 
+  useEffect(() => {
+    if (!shouldShowAuthModal) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [shouldShowAuthModal]);
+
   return (
     <section className={styles.section}>
       <div className="container">

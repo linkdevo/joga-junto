@@ -1,12 +1,19 @@
 import { CourtBookingButton } from "../CourtBookingButton/CourtBookingButton";
-import { Building2, Clock3, MapPin, Users } from "lucide-react";
+import { Building2, Clock3, CookingPot, MapPin, Users } from "lucide-react";
 
 import type { Court } from "@/types/court";
+import { formatDistance } from "@/utils/geo";
 
 import styles from "./CourtCard.module.css";
 
 type CourtCardProps = {
   court: Court;
+
+  /**
+   * Distância até o usuário, em km, quando a lista está
+   * ordenada por "mais próximas". `null` esconde o badge.
+   */
+  distanceKm?: number | null;
 };
 
 function formatCurrency(valueInCents: number) {
@@ -16,7 +23,8 @@ function formatCurrency(valueInCents: number) {
   }).format(valueInCents / 100);
 }
 
-export function CourtCard({ court }: CourtCardProps) {
+export function CourtCard({ court, distanceKm }: CourtCardProps) {
+
   return (
     <article className={styles.card}>
       <div className={styles.imageWrapper}>
@@ -50,6 +58,18 @@ export function CourtCard({ court }: CourtCardProps) {
           </div>
         </div>
 
+        {court.complex.leisureAreas.available && (
+          <div className={styles.leisureBadge}>
+            <CookingPot size={17} />
+
+            <span>
+              {court.complex.leisureAreas.count === 1
+                ? "Churrasqueira disponível"
+                : `${court.complex.leisureAreas.count} áreas de lazer disponíveis`}
+            </span>
+          </div>
+        )}
+
         <div className={styles.location}>
           <MapPin size={16} />
 
@@ -57,6 +77,12 @@ export function CourtCard({ court }: CourtCardProps) {
             {court.complex.address.neighborhood}, {court.complex.address.city} -{" "}
             {court.complex.address.state}
           </span>
+
+          {typeof distanceKm === "number" && Number.isFinite(distanceKm) && (
+            <span className={styles.distanceBadge}>
+              {formatDistance(distanceKm)}
+            </span>
+          )}
         </div>
 
         <div className={styles.infoGrid}>

@@ -3,6 +3,7 @@ export type AuthUser = {
   name: string;
   phone: string;
   email: string;
+  avatarUrl: string | null;
 };
 
 export type LoginResponse = {

@@ -319,6 +319,12 @@
 }
 
 .authModalOverlay {
+  /*
+   * Cobre a página inteira abaixo do header (que fica com
+   * z-index maior e continua acessível) para impedir o
+   * visitante de interagir com quadras, filtros etc. antes
+   * de fazer login ou criar conta.
+   */
   position: fixed;
   top: 72px;
   right: 0;
@@ -330,6 +336,7 @@
   place-items: center;
 
   padding: 24px;
+  overflow-y: auto;
 
   background: rgba(3, 8, 13, 0.72);
   backdrop-filter: blur(10px);

@@ -4,46 +4,45 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-import { clearSession, getStoredUser, getToken } from "@/lib/auth";
+import { clearSession, getStoredUser } from "@/lib/auth";
+import { ProfileMenu } from "../ProfileMenu/ProfileMenu";
+import type { AuthUser } from "@/types/auth";
 import styles from "./Header.module.css";
 
-function hasStoredSession() {
-  return Boolean(getToken() && getStoredUser());
-}
+const LANDING_URL =
+  process.env.NEXT_PUBLIC_LANDING_URL ?? "http://localhost:3000";
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    setIsAuthenticated(hasStoredSession());
+    setUser(getStoredUser());
   }, [pathname]);
 
   function handleLogout() {
     clearSession();
-    setIsAuthenticated(false);
+    setUser(null);
     router.replace("/login");
   }
 
   return (
     <header className={styles.header}>
       <div className={`container ${styles.content}`}>
-        <Link href="/" className={styles.logo}>
+        <a href={LANDING_URL} className={styles.logo}>
           <span className={styles.logoMark}>⚽</span>
 
           <span>Joga Junto</span>
-        </Link>
+        </a>
 
-        {isAuthenticated ? (
-          <button
-            type="button"
-            onClick={handleLogout}
-            className={styles.loginButton}
-          >
-            Sair
-          </button>
+        {user ? (
+          <ProfileMenu
+            user={user}
+            onUserUpdate={setUser}
+            onLogout={handleLogout}
+          />
         ) : (
           <Link href="/login" className={styles.loginButton}>
             Login

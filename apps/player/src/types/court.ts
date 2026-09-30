@@ -6,6 +6,13 @@ export type ComplexAddress = {
   city: string;
   state: string;
   zipCode: string;
+
+  /*
+   * Podem vir nulas quando o complexo ainda não foi
+   * geocodificado pelo backend.
+   */
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type CourtComplex = {
@@ -15,6 +22,10 @@ export type CourtComplex = {
   description: string;
   location: string;
   address: ComplexAddress;
+  leisureAreas: {
+    available: boolean;
+    count: number;
+  };
 };
 
 export type Court = {

@@ -10,6 +10,8 @@ import {
   type AuthenticatedAdminRequest,
 } from "../middlewares/authenticate-admin";
 
+import { getRouteParam } from "../utils/route-params";
+
 const router = Router();
 
 const ADMIN_JWT_SECRET =
@@ -515,7 +517,13 @@ router.get(
       });
     }
 
-    const { courtId } = request.params;
+    const courtId = getRouteParam(request.params.courtId);
+
+    if (!courtId) {
+      return response.status(400).json({
+        message: "O ID da quadra não foi informado.",
+      });
+    }
 
     try {
       const { courts } = await getCollections();
@@ -723,7 +731,13 @@ router.patch(
       });
     }
 
-    const { courtId } = request.params;
+    const courtId = getRouteParam(request.params.courtId);
+
+    if (!courtId) {
+      return response.status(400).json({
+        message: "O ID da quadra não foi informado.",
+      });
+    }
 
     const parsedBody = adminCourtUpdateSchema.safeParse(request.body);
 

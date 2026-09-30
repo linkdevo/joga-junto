@@ -36,3 +36,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Gerados automaticamente pelo `next dev` (guia de agentes de IA)
+apps/*/AGENTS.md
+apps/*/CLAUDE.md

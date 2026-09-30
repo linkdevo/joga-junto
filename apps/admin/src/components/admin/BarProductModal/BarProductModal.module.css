@@ -1,0 +1,17 @@
+.deleteAction {
+  margin-right: auto;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  border-color: rgba(255, 92, 103, 0.35) !important;
+
+  color: #ff7b85 !important;
+}
+
+.deleteAction:hover:not(:disabled) {
+  border-color: rgba(255, 92, 103, 0.6) !important;
+
+  background: rgba(255, 92, 103, 0.08) !important;
+}

@@ -40,6 +40,18 @@ export function getStoredUser(): AuthUser | null {
   }
 }
 
+/**
+ * Atualiza apenas os dados do usuário armazenados localmente,
+ * mantendo o token da sessão atual (usado após editar o perfil).
+ */
+export function updateStoredUser(user: AuthUser) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 export function clearSession() {
   if (typeof window === "undefined") {
     return;

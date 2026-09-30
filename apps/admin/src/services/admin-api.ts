@@ -4,13 +4,30 @@ import {
 } from "@/services/admin-auth-storage";
 
 import type {
+  AdminBarProductMutationResponse,
+  AdminBarProductsResponse,
   AdminCourtMutationResponse,
   AdminCourtsResponse,
+  AdminFinanceContractsResponse,
+  AdminFinanceCostsResponse,
+  AdminFinanceSummary,
+  AdminLeisureAreaMutationResponse,
+  AdminLeisureAreasResponse,
   AdminLoginResponse,
   AdminMeResponse,
+  AdminPayoutRequest,
+  AdminPayoutsResponse,
+  AdminWallet,
   ApiErrorResponse,
   CreateAdminCourtPayload,
+  CreateAdminLeisureAreaPayload,
+  CreateBarProductPayload,
+  CreateFinanceContractPayload,
+  CreateFinanceCostPayload,
   UpdateAdminCourtPayload,
+  UpdateAdminLeisureAreaPayload,
+  UpdateBarProductPayload,
+  UpdatePayoutAccountPayload,
 } from "@/types/admin";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
@@ -158,4 +175,212 @@ export function updateAdminCourt(
 
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * ============================================================
+ * ÁREAS DE LAZER (CHURRASQUEIRA, ETC.)
+ * ============================================================
+ */
+
+export function getAdminLeisureAreas() {
+  return request<AdminLeisureAreasResponse>("/admin/leisure-areas", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function createAdminLeisureArea(
+  payload: CreateAdminLeisureAreaPayload,
+) {
+  return request<AdminLeisureAreaMutationResponse>("/admin/leisure-areas", {
+    method: "POST",
+    authenticated: true,
+
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAdminLeisureArea(
+  areaId: string,
+  payload: UpdateAdminLeisureAreaPayload,
+) {
+  return request<AdminLeisureAreaMutationResponse>(
+    `/admin/leisure-areas/${areaId}`,
+    {
+      method: "PATCH",
+      authenticated: true,
+
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+/**
+ * ============================================================
+ * ESTOQUE DO BAR
+ * ============================================================
+ */
+
+export function getAdminBarProducts() {
+  return request<AdminBarProductsResponse>("/admin/bar-products", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function createAdminBarProduct(payload: CreateBarProductPayload) {
+  return request<AdminBarProductMutationResponse>("/admin/bar-products", {
+    method: "POST",
+    authenticated: true,
+
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAdminBarProduct(
+  productId: string,
+  payload: UpdateBarProductPayload,
+) {
+  return request<AdminBarProductMutationResponse>(
+    `/admin/bar-products/${productId}`,
+    {
+      method: "PATCH",
+      authenticated: true,
+
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function adjustAdminBarProductStock(productId: string, delta: number) {
+  return request<AdminBarProductMutationResponse>(
+    `/admin/bar-products/${productId}/stock`,
+    {
+      method: "PATCH",
+      authenticated: true,
+
+      body: JSON.stringify({
+        delta,
+      }),
+    },
+  );
+}
+
+export function deleteAdminBarProduct(productId: string) {
+  return request<{ message: string }>(`/admin/bar-products/${productId}`, {
+    method: "DELETE",
+    authenticated: true,
+  });
+}
+
+/**
+ * ============================================================
+ * FINANCEIRO
+ * ============================================================
+ */
+
+export function getAdminFinanceCosts(month: string) {
+  return request<AdminFinanceCostsResponse>(
+    `/admin/finance/costs?month=${encodeURIComponent(month)}`,
+    {
+      method: "GET",
+      authenticated: true,
+    },
+  );
+}
+
+export function createAdminFinanceCost(payload: CreateFinanceCostPayload) {
+  return request<{ message: string }>("/admin/finance/costs", {
+    method: "POST",
+    authenticated: true,
+
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAdminFinanceCost(costId: string) {
+  return request<{ message: string }>(`/admin/finance/costs/${costId}`, {
+    method: "DELETE",
+    authenticated: true,
+  });
+}
+
+export function getAdminFinanceContracts() {
+  return request<AdminFinanceContractsResponse>("/admin/finance/contracts", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function createAdminFinanceContract(
+  payload: CreateFinanceContractPayload,
+) {
+  return request<{ message: string }>("/admin/finance/contracts", {
+    method: "POST",
+    authenticated: true,
+
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAdminFinanceContract(contractId: string) {
+  return request<{ message: string }>(
+    `/admin/finance/contracts/${contractId}`,
+    {
+      method: "DELETE",
+      authenticated: true,
+    },
+  );
+}
+
+export function getAdminFinanceSummary(month: string) {
+  return request<AdminFinanceSummary>(
+    `/admin/finance/summary?month=${encodeURIComponent(month)}`,
+    {
+      method: "GET",
+      authenticated: true,
+    },
+  );
+}
+
+/**
+ * ============================================================
+ * CARTEIRA E PIX
+ * ============================================================
+ */
+
+export function getAdminWallet() {
+  return request<AdminWallet>("/admin/wallet", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function updateAdminPayoutAccount(
+  payload: UpdatePayoutAccountPayload,
+) {
+  return request<{ message: string }>("/admin/wallet/payout-account", {
+    method: "PATCH",
+    authenticated: true,
+
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getAdminPayouts() {
+  return request<AdminPayoutsResponse>("/admin/wallet/payouts", {
+    method: "GET",
+    authenticated: true,
+  });
+}
+
+export function requestAdminPayout() {
+  return request<{ message: string; payout: AdminPayoutRequest }>(
+    "/admin/wallet/payouts",
+    {
+      method: "POST",
+      authenticated: true,
+    },
+  );
 }

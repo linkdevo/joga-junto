@@ -1,0 +1,251 @@
+.card {
+  border: 1px solid #2a313b;
+  border-radius: 16px;
+
+  background: #191e26;
+
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 20px 22px;
+
+  border-bottom: 1px solid #262d37;
+}
+
+.cardHeader h3 {
+  margin: 0;
+
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  min-height: 38px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #00e889;
+
+  padding: 0 14px;
+
+  color: #07130d;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.addButton:hover {
+  background: #00d27c;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 12px 22px;
+
+  color: #7c899a;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  text-align: left;
+
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 14px 22px;
+
+  border-top: 1px solid #232a33;
+
+  color: #e2e7ee;
+
+  font-size: 13px;
+
+  white-space: nowrap;
+}
+
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+
+  border-radius: 999px;
+
+  padding: 4px 10px;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badgeFixed {
+  color: #f4bd3f;
+  background: rgba(244, 189, 63, 0.12);
+}
+
+.badgeVariable {
+  color: #7ea7ff;
+  background: rgba(126, 167, 255, 0.12);
+}
+
+.badgeOk {
+  color: #00e889;
+  background: rgba(0, 232, 137, 0.1);
+}
+
+.badgeWarning {
+  color: #ff7b85;
+  background: rgba(255, 123, 133, 0.12);
+}
+
+.deleteButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  border: 1px solid #303945;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: #ff7b85;
+
+  cursor: pointer;
+}
+
+.deleteButton:hover {
+  border-color: rgba(255, 92, 103, 0.5);
+
+  background: rgba(255, 92, 103, 0.06);
+}
+
+.editButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  min-height: 32px;
+
+  border: 1px solid #303945;
+  border-radius: 8px;
+
+  background: transparent;
+
+  padding: 0 10px;
+
+  color: #c3cbd6;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.editButton:hover {
+  border-color: #46515f;
+
+  color: #ffffff;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepperButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 26px;
+  height: 26px;
+
+  border: 1px solid #303945;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #c3cbd6;
+
+  cursor: pointer;
+}
+
+.stepperButton:hover:not(:disabled) {
+  border-color: #46515f;
+
+  color: #ffffff;
+}
+
+.stepperButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepperValue {
+  min-width: 28px;
+
+  color: #ffffff;
+
+  font-weight: 800;
+
+  text-align: center;
+}
+
+.errorBanner {
+  margin: 16px 22px 0;
+
+  border: 1px solid rgba(255, 92, 103, 0.32);
+  border-radius: 8px;
+
+  background: rgba(255, 92, 103, 0.08);
+
+  padding: 10px 14px;
+
+  color: #ff8089;
+
+  font-size: 12px;
+}
+
+.empty {
+  padding: 40px 22px;
+
+  color: #7c899a;
+
+  font-size: 13px;
+
+  text-align: center;
+}

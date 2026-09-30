@@ -701,3 +701,174 @@
     justify-content: flex-start;
   }
 }
+
+.leisureChoice {
+  margin: 15px 0 0;
+  padding: 14px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 191, 71, 0.2);
+  background: rgba(255, 191, 71, 0.05);
+}
+
+.leisureChoice legend {
+  padding: 0 6px;
+  color: #f4f7fb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.leisureChoice label {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: 18px;
+  color: #a6b3c5;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.leisureChoice input {
+  accent-color: #00e991;
+}
+
+.leisureEditBox {
+  margin-bottom: 16px;
+  padding: 15px;
+  border-radius: 12px;
+  background: #111b2b;
+  border: 1px solid rgba(255, 191, 71, 0.16);
+}
+
+.leisureEditBox > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffbf47;
+}
+
+.leisureEditBox strong,
+.leisureEditBox small {
+  display: block;
+}
+
+.leisureEditBox strong {
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.leisureEditBox small {
+  margin-top: 3px;
+  color: #8798ae;
+  font-size: 11px;
+}
+
+.leisureEditActions {
+  margin-top: 13px;
+  display: flex;
+  gap: 8px;
+}
+
+.leisureOptionButton,
+.leisureActiveButton {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.leisureOptionButton {
+  color: #dbe3ee;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.leisureActiveButton {
+  color: #04100b;
+  background: #00e991;
+  border: 1px solid #00e991;
+}
+
+.leisureYesBadge,
+.leisureNoBadge {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.leisureYesBadge {
+  color: #ffbf47;
+  background: rgba(255, 191, 71, 0.09);
+  border: 1px solid rgba(255, 191, 71, 0.25);
+}
+
+.leisureNoBadge {
+  color: #8998ac;
+  background: rgba(137, 152, 172, 0.08);
+  border: 1px solid rgba(137, 152, 172, 0.2);
+}
+
+.paymentWaiting {
+  margin-top: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px;
+  border-radius: 10px;
+  color: #ffbf47;
+  background: rgba(255, 191, 71, 0.07);
+  border: 1px solid rgba(255, 191, 71, 0.18);
+}
+
+.paymentWaiting strong {
+  color: #f7f9fc;
+  font-size: 12px;
+}
+
+.paymentWaiting p {
+  margin: 4px 0 0;
+  font-size: 11px;
+}
+
+.paymentBreakdown {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.paymentBreakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.paymentBreakdown span {
+  color: #91a3b9;
+  font-size: 11px;
+}
+
+.paymentBreakdown strong {
+  color: #f7f9fc;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .leisureChoice label {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .leisureEditActions {
+    flex-direction: column;
+  }
+}

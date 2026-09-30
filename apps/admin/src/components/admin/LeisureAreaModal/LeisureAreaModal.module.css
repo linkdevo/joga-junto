@@ -1,0 +1,98 @@
+.blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.block {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr auto auto;
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #303945;
+  border-radius: 9px;
+  background: #1b2128;
+}
+
+.blockField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.blockField label {
+  color: #cdd5df;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.blockActive {
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid #303945;
+  border-radius: 8px;
+  background: transparent;
+  color: #8c9aab;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.blockActiveOn {
+  border-color: rgba(0, 232, 137, 0.55);
+  background: rgba(0, 232, 137, 0.09);
+  color: #00e889;
+}
+
+.remove {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #303945;
+  border-radius: 8px;
+  background: transparent;
+  color: #ff7b85;
+  cursor: pointer;
+}
+
+.remove:hover:not(:disabled) {
+  border-color: rgba(255, 92, 103, 0.5);
+}
+
+.remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.addBlock {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px dashed rgba(0, 232, 137, 0.45);
+  border-radius: 8px;
+  background: transparent;
+  color: #00e889;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.addBlock:hover {
+  background: rgba(0, 232, 137, 0.06);
+}
+
+@media (max-width: 650px) {
+  .block {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .blockPrice {
+    grid-column: 1 / -1;
+  }
+}

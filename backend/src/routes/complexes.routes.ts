@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { getCollections, type Complex, type Court } from "../database";
+import { geocodeAddress } from "../services/geocode-address";
 
 const router = Router();
 
@@ -110,6 +111,19 @@ router.post("/complexos", async (request, response) => {
   const now = new Date();
   const complexId = randomUUID();
 
+  /*
+   * Best-effort: se a geocodificação falhar, o complexo é
+   * criado do mesmo jeito e ganha latitude/longitude na
+   * primeira vez que aparecer em GET /player/courts.
+   */
+  const coordinates = await geocodeAddress({
+    ...data.address,
+    state: data.address.state.toUpperCase(),
+    complement: data.address.complement ?? null,
+    latitude: null,
+    longitude: null,
+  });
+
   const courtDocuments: Court[] = data.courts.map((courtInput) => {
     return {
       id: randomUUID(),
@@ -152,6 +166,8 @@ router.post("/complexos", async (request, response) => {
       ...data.address,
       state: data.address.state.toUpperCase(),
       complement: data.address.complement ?? null,
+      latitude: coordinates?.latitude ?? null,
+      longitude: coordinates?.longitude ?? null,
     },
 
     courts: courtDocuments.map((court) => ({

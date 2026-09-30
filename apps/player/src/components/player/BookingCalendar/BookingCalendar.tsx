@@ -4,15 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { CalendarDays, CheckCircle2, MapPin, Radio, X } from "lucide-react";
+import { CalendarDays, CookingPot, MapPin, Radio, X } from "lucide-react";
 
 import type { Court } from "@/types/court";
-import type { AvailabilitySlot, CourtAvailability } from "@/types/booking";
+
+import type { AvailabilitySlot, BookingOptions } from "@/types/booking";
 
 import {
   BookingApiError,
   createBooking,
-  getCourtAvailability,
+  getBookingOptions,
   subscribeCourtAvailability,
 } from "@/services/booking.service";
 
@@ -92,11 +93,19 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
 
   const [selectedDate, setSelectedDate] = useState(todayValue);
 
-  const [availability, setAvailability] = useState<CourtAvailability | null>(
-    null,
-  );
+  const [availability, setAvailability] = useState<BookingOptions | null>(null);
 
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+
+  const [includeLeisure, setIncludeLeisure] = useState(false);
+
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+
+  const [captainParticipates, setCaptainParticipates] = useState<
+    boolean | null
+  >(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -104,16 +113,38 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
 
   const [error, setError] = useState("");
 
-  const [success, setSuccess] = useState("");
-
   const [realtimeConnected, setRealtimeConnected] = useState(false);
+
+  const selectedArea = useMemo(() => {
+    return (
+      availability?.leisureAreas.find((area) => area.id === selectedAreaId) ??
+      null
+    );
+  }, [availability, selectedAreaId]);
+
+  const selectedBlock = useMemo(() => {
+    return (
+      selectedArea?.blocks.find((block) => block.id === selectedBlockId) ?? null
+    );
+  }, [selectedArea, selectedBlockId]);
+
+  const combinedTotalInCents =
+    court.priceInCents +
+    (includeLeisure && selectedBlock ? selectedBlock.priceInCents : 0);
+
+  const canConfirm =
+    selectedTime !== null &&
+    (!includeLeisure ||
+      (selectedArea !== null &&
+        selectedBlock !== null &&
+        captainParticipates !== null));
 
   async function loadAvailability() {
     setLoading(true);
     setError("");
 
     try {
-      const data = await getCourtAvailability(court.slug, selectedDate);
+      const data = await getBookingOptions(court.slug, selectedDate);
 
       setAvailability(data);
 
@@ -122,12 +153,26 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
           return null;
         }
 
-        const stillAvailable = data.slots.some(
+        const stillAvailable = data.court.slots.some(
           (slot) => slot.time === current && slot.status === "AVAILABLE",
         );
 
         return stillAvailable ? current : null;
       });
+
+      const currentArea = data.leisureAreas.find(
+        (area) => area.id === selectedAreaId,
+      );
+
+      const currentBlock = currentArea?.blocks.find(
+        (block) => block.id === selectedBlockId && block.status === "AVAILABLE",
+      );
+
+      if (selectedAreaId && (!currentArea || !currentBlock)) {
+        setSelectedAreaId(null);
+        setSelectedBlockId(null);
+        setCaptainParticipates(null);
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -143,6 +188,13 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
     loadAvailability();
   }, [court.slug, selectedDate]);
 
+  /*
+   * Mantém o SSE atual da quadra.
+   *
+   * O bloqueio definitivo da churrasqueira
+   * continua sendo realizado pelo índice
+   * UNIQUE no backend.
+   */
   useEffect(() => {
     const unsubscribe = subscribeCourtAvailability(
       court.slug,
@@ -164,23 +216,22 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
           return {
             ...current,
 
-            slots: current.slots.map((slot) => {
-              if (slot.time !== event.startTime) {
-                return slot;
-              }
+            court: {
+              ...current.court,
 
-              if (event.type === "BOOKING_CREATED") {
+              slots: current.court.slots.map((slot) => {
+                if (slot.time !== event.startTime) {
+                  return slot;
+                }
+
                 return {
                   ...slot,
-                  status: "RESERVED",
-                };
-              }
 
-              return {
-                ...slot,
-                status: "AVAILABLE",
-              };
-            }),
+                  status:
+                    event.type === "BOOKING_CREATED" ? "RESERVED" : "AVAILABLE",
+                };
+              }),
+            },
           };
         });
 
@@ -227,19 +278,65 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
     };
   }, [onClose]);
 
-  function selectSlot(slot: AvailabilitySlot) {
+  function resetSelectionsForDate(date: string) {
+    setSelectedDate(date);
+
+    setSelectedTime(null);
+
+    setSelectedAreaId(null);
+    setSelectedBlockId(null);
+    setCaptainParticipates(null);
+
+    setError("");
+  }
+
+  function selectCourtSlot(slot: AvailabilitySlot) {
     if (slot.status !== "AVAILABLE") {
       return;
     }
 
     setError("");
-    setSuccess("");
-
     setSelectedTime(slot.time);
+  }
+
+  function handleLeisureToggle(checked: boolean) {
+    setIncludeLeisure(checked);
+    setError("");
+
+    if (!checked) {
+      setSelectedAreaId(null);
+      setSelectedBlockId(null);
+      setCaptainParticipates(null);
+    }
+  }
+
+  function selectLeisureArea(areaId: string) {
+    setSelectedAreaId(areaId);
+    setSelectedBlockId(null);
+    setCaptainParticipates(null);
+    setError("");
+  }
+
+  function selectLeisureBlock(blockId: string) {
+    setSelectedBlockId(blockId);
+    setError("");
   }
 
   async function handleConfirmBooking() {
     if (!selectedTime) {
+      setError("Selecione o horário da quadra.");
+
+      return;
+    }
+
+    if (
+      includeLeisure &&
+      (!selectedArea || !selectedBlock || captainParticipates === null)
+    ) {
+      setError(
+        "Selecione a churrasqueira, o horário e informe se o capitão participará.",
+      );
+
       return;
     }
 
@@ -252,27 +349,46 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
 
     setCreatingBooking(true);
     setError("");
-    setSuccess("");
 
     try {
       const booking = await createBooking(
         {
           courtSlug: court.slug,
+
           bookingDate: selectedDate,
+
           startTime: selectedTime,
+
           expectedPlayers: court.players,
+
+          ...(includeLeisure &&
+          selectedArea &&
+          selectedBlock &&
+          captainParticipates !== null
+            ? {
+                leisure: {
+                  areaId: selectedArea.id,
+
+                  blockId: selectedBlock.id,
+
+                  captainParticipates,
+                },
+              }
+            : {}),
         },
+
         token,
       );
 
       router.push(`/reservas/${booking.shareCode}`);
     } catch (err) {
       if (err instanceof BookingApiError && err.status === 409) {
-        setError(
-          "Este horário acabou de ser reservado. Escolha outro horário.",
-        );
+        setError(err.message);
 
         setSelectedTime(null);
+        setSelectedAreaId(null);
+        setSelectedBlockId(null);
+        setCaptainParticipates(null);
 
         await loadAvailability();
 
@@ -298,12 +414,17 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
         }
       }}
     >
-      <section className={styles.modal}>
+      <section
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-modal-title"
+      >
         <header className={styles.header}>
           <div>
             <div className={styles.realtimeBadge}>
               <Radio size={17} />
-              Disponibilidade de Quadras em Tempo Real
+              Disponibilidade em tempo real
               <span
                 className={
                   realtimeConnected ? styles.online : styles.connecting
@@ -311,7 +432,7 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
               />
             </div>
 
-            <h2>Agende seu Horário</h2>
+            <h2 id="booking-modal-title">Agende seu horário</h2>
 
             <p>
               <MapPin size={18} />
@@ -334,6 +455,7 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
           <div className={styles.dateRow}>
             <div className={styles.dateLabel}>
               <CalendarDays size={21} />
+
               <strong>Data:</strong>
             </div>
 
@@ -345,13 +467,7 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
                   <button
                     key={value}
                     type="button"
-                    onClick={() => {
-                      setSelectedDate(value);
-
-                      setSelectedTime(null);
-
-                      setSuccess("");
-                    }}
+                    onClick={() => resetSelectionsForDate(value)}
                     className={selectedDate === value ? styles.activeDate : ""}
                   >
                     {formatQuickDate(date, index)}
@@ -363,13 +479,7 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
                 type="date"
                 min={todayValue}
                 value={selectedDate}
-                onChange={(event) => {
-                  setSelectedDate(event.target.value);
-
-                  setSelectedTime(null);
-
-                  setSuccess("");
-                }}
+                onChange={(event) => resetSelectionsForDate(event.target.value)}
                 className={styles.dateInput}
               />
             </div>
@@ -405,7 +515,7 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
               </div>
 
               <div className={styles.price}>
-                <span>A partir de</span>
+                <span>Valor da quadra</span>
 
                 <strong>{formatCurrency(court.priceInCents)}</strong>
               </div>
@@ -415,12 +525,12 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
               <div className={styles.stateMessage}>Carregando horários...</div>
             ) : (
               <div className={styles.slots}>
-                {availability?.slots.map((slot) => (
+                {availability?.court.slots.map((slot) => (
                   <button
                     key={slot.time}
                     type="button"
                     disabled={slot.status !== "AVAILABLE"}
-                    onClick={() => selectSlot(slot)}
+                    onClick={() => selectCourtSlot(slot)}
                     className={[
                       styles.slot,
 
@@ -448,50 +558,187 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
                 ))}
               </div>
             )}
+          </article>
 
-            {error && <p className={styles.error}>{error}</p>}
+          {availability && availability.leisureAreas.length > 0 && (
+            <article className={styles.leisurePanel}>
+              <label className={styles.leisureToggle}>
+                <input
+                  type="checkbox"
+                  checked={includeLeisure}
+                  onChange={(event) =>
+                    handleLeisureToggle(event.target.checked)
+                  }
+                />
 
-            {success && (
-              <p className={styles.success}>
-                <CheckCircle2 size={18} />
+                <span className={styles.toggleIcon}>
+                  <CookingPot size={22} />
+                </span>
 
-                {success}
-              </p>
-            )}
+                <span>
+                  <strong>Adicionar churrasqueira</strong>
 
-            {selectedTime && (
-              <div className={styles.confirmation}>
+                  <small>Reserve uma área de lazer junto com a quadra.</small>
+                </span>
+              </label>
+
+              {includeLeisure && (
+                <div className={styles.leisureContent}>
+                  <div className={styles.leisureHeading}>
+                    <span>1. Escolha a área</span>
+                  </div>
+
+                  <div className={styles.areaGrid}>
+                    {availability.leisureAreas.map((area) => (
+                      <button
+                        key={area.id}
+                        type="button"
+                        onClick={() => selectLeisureArea(area.id)}
+                        className={[
+                          styles.areaButton,
+
+                          selectedAreaId === area.id ? styles.areaSelected : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <CookingPot size={20} />
+
+                        <span>
+                          <strong>{area.name}</strong>
+
+                          <small>{area.description}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedArea && (
+                    <>
+                      <div className={styles.leisureHeading}>
+                        <span>2. Escolha o horário</span>
+                      </div>
+
+                      <div className={styles.blockGrid}>
+                        {selectedArea.blocks.map((block) => (
+                          <button
+                            key={block.id}
+                            type="button"
+                            disabled={block.status !== "AVAILABLE"}
+                            onClick={() => selectLeisureBlock(block.id)}
+                            className={[
+                              styles.leisureBlock,
+
+                              block.status === "AVAILABLE"
+                                ? styles.available
+                                : "",
+
+                              block.status === "RESERVED"
+                                ? styles.reserved
+                                : "",
+
+                              block.status === "UNAVAILABLE"
+                                ? styles.unavailable
+                                : "",
+
+                              selectedBlockId === block.id
+                                ? styles.selected
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
+                            <strong>
+                              {block.startTime} – {block.endTime}
+                            </strong>
+
+                            <span>
+                              {block.status === "AVAILABLE"
+                                ? formatCurrency(block.priceInCents)
+                                : block.status === "RESERVED"
+                                  ? "Reservado"
+                                  : "Indisponível"}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {selectedBlock && (
+                    <fieldset className={styles.participationChoice}>
+                      <legend>3. O capitão participará do churrasco?</legend>
+
+                      <label className={styles.radioOption}>
+                        <input
+                          type="radio"
+                          name="captainParticipates"
+                          checked={captainParticipates === true}
+                          onChange={() => setCaptainParticipates(true)}
+                        />
+                        Sim, participarei
+                      </label>
+
+                      <label className={styles.radioOption}>
+                        <input
+                          type="radio"
+                          name="captainParticipates"
+                          checked={captainParticipates === false}
+                          onChange={() => setCaptainParticipates(false)}
+                        />
+                        Não participarei
+                      </label>
+                    </fieldset>
+                  )}
+                </div>
+              )}
+            </article>
+          )}
+
+          {error && <p className={styles.error}>{error}</p>}
+
+          {selectedTime && (
+            <div className={styles.confirmation}>
+              <div>
+                <span>Quadra selecionada</span>
+
+                <strong>
+                  {formatFullDate(selectedDate)} às {selectedTime}
+                </strong>
+              </div>
+
+              <div>
+                <span>Valor da quadra</span>
+
+                <strong>{formatCurrency(court.priceInCents)}</strong>
+              </div>
+
+              {includeLeisure && selectedArea && selectedBlock && (
                 <div>
-                  <span>Reserva selecionada</span>
+                  <span>{selectedArea.name}</span>
 
                   <strong>
-                    {formatFullDate(selectedDate)} às {selectedTime}
+                    {selectedBlock.startTime} – {selectedBlock.endTime}
                   </strong>
                 </div>
+              )}
 
-                <div>
-                  <span>Valor da quadra</span>
+              <div>
+                <span>Total reservado</span>
 
-                  <strong>{formatCurrency(court.priceInCents)}</strong>
-                </div>
-
-                <div>
-                  <span>Jogadores</span>
-
-                  <strong>{court.players}</strong>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={creatingBooking}
-                  onClick={handleConfirmBooking}
-                  className={styles.confirmButton}
-                >
-                  {creatingBooking ? "Reservando..." : "Confirmar Reserva"}
-                </button>
+                <strong>{formatCurrency(combinedTotalInCents)}</strong>
               </div>
-            )}
-          </article>
+
+              <button
+                type="button"
+                disabled={creatingBooking || !canConfirm}
+                onClick={handleConfirmBooking}
+                className={styles.confirmButton}
+              >
+                {creatingBooking ? "Reservando..." : "Confirmar reserva"}
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>

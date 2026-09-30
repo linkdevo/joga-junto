@@ -176,6 +176,7 @@
 
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
 
   gap: 8px;
 
@@ -188,6 +189,23 @@
   flex-shrink: 0;
 
   color: var(--primary);
+}
+
+.distanceBadge {
+  margin-left: auto;
+
+  flex-shrink: 0;
+
+  border-radius: 999px;
+
+  background: rgba(110, 233, 111, 0.1);
+
+  padding: 4px 9px;
+
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .infoGrid {
@@ -274,4 +292,23 @@
   .infoGrid {
     grid-template-columns: 1fr;
   }
+}
+
+.leisureBadge {
+  width: fit-content;
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #ffbf47;
+  background: rgba(255, 191, 71, 0.09);
+  border: 1px solid rgba(255, 191, 71, 0.22);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.leisureBadge svg {
+  flex-shrink: 0;
 }

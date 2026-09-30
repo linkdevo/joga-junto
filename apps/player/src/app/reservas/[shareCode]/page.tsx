@@ -8,6 +8,7 @@ import {
   CircleCheck,
   CircleDollarSign,
   Clock3,
+  CookingPot,
   Copy,
   LocateFixed,
   Share2,
@@ -20,6 +21,7 @@ import {
   getBookingByShareCode,
   getMyBookingPayment,
   joinBooking,
+  updateLeisureParticipation,
 } from "@/services/booking.service";
 import type { AuthUser } from "@/types/auth";
 import type {
@@ -55,6 +57,9 @@ export default function BookingSharePage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
+  const [leisureChoice, setLeisureChoice] = useState<boolean | null>(null);
+
+  const [isUpdatingLeisure, setIsUpdatingLeisure] = useState(false);
   const [error, setError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
 
@@ -127,6 +132,31 @@ export default function BookingSharePage() {
     );
   }, [activePlayers, storedUser]);
 
+  const hasActiveLeisure =
+    booking?.leisureArea != null &&
+    booking.leisureStatus === "ACTIVE" &&
+    booking.leisureSlotActive !== false;
+
+  const canChangeLeisureParticipation =
+    hasActiveLeisure &&
+    booking?.bookingStatus === "WAITING_PLAYERS" &&
+    !booking?.pricingFrozenAt;
+
+  const combinedReservationTotal = booking
+    ? booking.totalPriceInCents +
+      (booking.leisureArea && booking.leisureStatus === "ACTIVE"
+        ? booking.leisureArea.priceInCents
+        : 0)
+    : 0;
+
+  useEffect(() => {
+    if (!currentPlayer) {
+      return;
+    }
+
+    setLeisureChoice(currentPlayer.participatesInLeisure ?? null);
+  }, [currentPlayer]);
+
   const playersCount = activePlayers.length;
   const remainingSlots = Math.max(
     (booking?.expectedPlayers ?? 0) - playersCount,
@@ -174,6 +204,13 @@ export default function BookingSharePage() {
       router.push(
         `/login?redirect=${encodeURIComponent(`/reservas/${shareCode}`)}`,
       );
+
+      return;
+    }
+
+    if (hasActiveLeisure && leisureChoice === null) {
+      setError("Informe se você participará do churrasco.");
+
       return;
     }
 
@@ -181,7 +218,12 @@ export default function BookingSharePage() {
       setIsJoining(true);
       setError("");
 
-      await joinBooking(shareCode, currentToken);
+      await joinBooking(
+        shareCode,
+        currentToken,
+        hasActiveLeisure ? (leisureChoice ?? false) : undefined,
+      );
+
       await loadBooking();
       await loadPayment(currentToken);
     } catch (err) {
@@ -192,6 +234,33 @@ export default function BookingSharePage() {
       );
     } finally {
       setIsJoining(false);
+    }
+  }
+
+  async function handleUpdateLeisureParticipation(participates: boolean) {
+    const currentToken = getToken();
+
+    if (!currentToken) {
+      return;
+    }
+
+    try {
+      setIsUpdatingLeisure(true);
+      setError("");
+
+      await updateLeisureParticipation(shareCode, currentToken, participates);
+
+      setLeisureChoice(participates);
+
+      await loadBooking();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível alterar a participação.",
+      );
+    } finally {
+      setIsUpdatingLeisure(false);
     }
   }
 
@@ -254,6 +323,20 @@ export default function BookingSharePage() {
                 <strong>{booking.startTime}</strong>
               </article>
 
+              {booking.leisureArea && (
+                <article className={styles.statCard}>
+                  <span>
+                    <CookingPot size={16} />
+                    Churrasqueira
+                  </span>
+
+                  <strong>
+                    {booking.leisureArea.startTime}–
+                    {booking.leisureArea.endTime}
+                  </strong>
+                </article>
+              )}
+
               <article className={styles.statCard}>
                 <span>
                   <CircleDollarSign size={16} />
@@ -261,6 +344,19 @@ export default function BookingSharePage() {
                 </span>
                 <strong>{formatCurrency(booking.courtPriceInCents)}</strong>
               </article>
+
+              {booking.leisureArea && (
+                <article className={styles.statCard}>
+                  <span>
+                    <CircleDollarSign size={16} />
+                    Preço da churrasqueira
+                  </span>
+
+                  <strong>
+                    {formatCurrency(booking.leisureArea.priceInCents)}
+                  </strong>
+                </article>
+              )}
 
               <article className={styles.statCard}>
                 <span>
@@ -275,8 +371,9 @@ export default function BookingSharePage() {
 
             <div className={styles.summaryRow}>
               <div>
-                <span>Total da reserva</span>
-                <strong>{formatCurrency(booking.totalPriceInCents)}</strong>
+                <span>Total reservado</span>
+
+                <strong>{formatCurrency(combinedReservationTotal)}</strong>
               </div>
 
               <div>
@@ -331,11 +428,39 @@ export default function BookingSharePage() {
                     de jogadores.
                   </p>
 
+                  {hasActiveLeisure && (
+                    <fieldset className={styles.leisureChoice}>
+                      <legend>Você participará do churrasco?</legend>
+
+                      <label>
+                        <input
+                          type="radio"
+                          name="join-leisure"
+                          checked={leisureChoice === true}
+                          onChange={() => setLeisureChoice(true)}
+                        />
+                        Sim, participarei
+                      </label>
+
+                      <label>
+                        <input
+                          type="radio"
+                          name="join-leisure"
+                          checked={leisureChoice === false}
+                          onChange={() => setLeisureChoice(false)}
+                        />
+                        Não participarei
+                      </label>
+                    </fieldset>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleJoinBooking}
                     className={styles.primaryButton}
-                    disabled={isJoining}
+                    disabled={
+                      isJoining || (hasActiveLeisure && leisureChoice === null)
+                    }
                   >
                     {isJoining ? "Entrando..." : "Entrar na reserva"}
                   </button>
@@ -343,6 +468,50 @@ export default function BookingSharePage() {
               ) : null}
 
               {error && <p className={styles.error}>{error}</p>}
+
+              {currentPlayer && canChangeLeisureParticipation && (
+                <div className={styles.leisureEditBox}>
+                  <div>
+                    <CookingPot size={20} />
+
+                    <div>
+                      <strong>Sua participação no churrasco</strong>
+
+                      <small>
+                        Você pode alterar enquanto o grupo não estiver completo.
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className={styles.leisureEditActions}>
+                    <button
+                      type="button"
+                      disabled={isUpdatingLeisure}
+                      onClick={() => handleUpdateLeisureParticipation(true)}
+                      className={
+                        currentPlayer.participatesInLeisure
+                          ? styles.leisureActiveButton
+                          : styles.leisureOptionButton
+                      }
+                    >
+                      Vou participar
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isUpdatingLeisure}
+                      onClick={() => handleUpdateLeisureParticipation(false)}
+                      className={
+                        !currentPlayer.participatesInLeisure
+                          ? styles.leisureActiveButton
+                          : styles.leisureOptionButton
+                      }
+                    >
+                      Não participarei
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className={styles.playersList}>
                 {Array.from({ length: booking.expectedPlayers }).map(
@@ -401,6 +570,22 @@ export default function BookingSharePage() {
                             Confirmado
                           </span>
 
+                          {booking.leisureArea && (
+                            <span
+                              className={
+                                player.participatesInLeisure
+                                  ? styles.leisureYesBadge
+                                  : styles.leisureNoBadge
+                              }
+                            >
+                              <CookingPot size={14} />
+
+                              {player.participatesInLeisure
+                                ? "Participa"
+                                : "Não participa"}
+                            </span>
+                          )}
+
                           <span
                             className={`${styles.paymentStatus} ${getPaymentClass(player)}`}
                           >
@@ -448,6 +633,61 @@ export default function BookingSharePage() {
                     </div>
                   </div>
 
+                  {!paymentInfo.available ? (
+                    <div className={styles.paymentWaiting}>
+                      <Clock3 size={22} />
+
+                      <div>
+                        <strong>Aguardando jogadores</strong>
+
+                        <p>
+                          O pagamento será liberado quando o grupo estiver
+                          completo.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.paymentBreakdown}>
+                      <div>
+                        <span>Parte da quadra</span>
+
+                        <strong>
+                          {formatCurrency(paymentInfo.courtShareInCents)}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>Taxa da quadra</span>
+
+                        <strong>
+                          {formatCurrency(paymentInfo.courtPlatformFeeInCents)}
+                        </strong>
+                      </div>
+
+                      {paymentInfo.participatesInLeisure && (
+                        <>
+                          <div>
+                            <span>Parte da churrasqueira</span>
+
+                            <strong>
+                              {formatCurrency(paymentInfo.leisureShareInCents)}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>Taxa da churrasqueira</span>
+
+                            <strong>
+                              {formatCurrency(
+                                paymentInfo.leisurePlatformFeeInCents,
+                              )}
+                            </strong>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   <div className={styles.paymentTop}>
                     <div>
                       <span>Valor</span>
@@ -467,23 +707,28 @@ export default function BookingSharePage() {
                     </span>
                   </div>
 
-                  <MockPixQr value={paymentInfo.pixCopyPaste} />
+                  {paymentInfo.available && (
+                    <>
+                      <MockPixQr value={paymentInfo.pixCopyPaste} />
 
-                  <div className={styles.pixBox}>
-                    <span>Código Pix mockado</span>
-                    <div className={styles.copyField}>
-                      {paymentInfo.pixCopyPaste}
-                    </div>
-                  </div>
+                      <div className={styles.pixBox}>
+                        <span>Código Pix mockado</span>
 
-                  <button
-                    type="button"
-                    onClick={handleCopyPix}
-                    className={styles.secondaryButton}
-                  >
-                    <Copy size={18} />
-                    Copiar Pix
-                  </button>
+                        <div className={styles.copyField}>
+                          {paymentInfo.pixCopyPaste}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyPix}
+                        className={styles.secondaryButton}
+                      >
+                        <Copy size={18} />
+                        Copiar Pix
+                      </button>
+                    </>
+                  )}
 
                   <small className={styles.sideNote}>
                     O pagamento real será implementado depois. Por enquanto, o

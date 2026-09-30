@@ -39,8 +39,8 @@ describe("court availability", () => {
       currentDateTime: "2026-09-08 12:00",
     });
 
-    expect(slots[0].status).toBe("UNAVAILABLE");
-    expect(slots[1].status).toBe("AVAILABLE");
+    expect(slots[0]?.status).toBe("UNAVAILABLE");
+    expect(slots[1]?.status).toBe("AVAILABLE");
   });
 
   it("identifica slot passado", () => {
