@@ -1,5 +1,6 @@
 import {
   getCollections,
+  getRequiredPlayers,
   withoutMongoId,
   withoutMongoIds,
   type Booking,
@@ -50,10 +51,10 @@ export async function finalizeBookingPricing(
   const players = withoutMongoIds(playerDocuments);
 
   /*
-   * O pagamento somente é liberado depois
-   * que o grupo estiver completo.
+   * O pagamento somente é liberado depois que o
+   * mínimo de jogadores da quadra for atingido.
    */
-  if (players.length < booking.expectedPlayers) {
+  if (players.length < getRequiredPlayers(booking)) {
     return booking;
   }
 

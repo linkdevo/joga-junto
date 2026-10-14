@@ -12,6 +12,7 @@ import {
   Copy,
   LocateFixed,
   Share2,
+  ShieldHalf,
   UserRound,
   Users,
 } from "lucide-react";
@@ -158,13 +159,23 @@ export default function BookingSharePage() {
   }, [currentPlayer]);
 
   const playersCount = activePlayers.length;
-  const remainingSlots = Math.max(
-    (booking?.expectedPlayers ?? 0) - playersCount,
-    0,
-  );
+
+  /*
+   * Mínimo de jogadores que libera o pagamento (definido pelo
+   * administrador para a quadra). A lista só mostra quem já
+   * confirmou presença; não há vagas vazias.
+   */
+  const requiredPlayers = booking
+    ? Math.min(
+        booking.minPlayers ?? booking.expectedPlayers,
+        booking.expectedPlayers,
+      )
+    : 0;
+
+  const remainingSlots = Math.max(requiredPlayers - playersCount, 0);
 
   const estimatedPerPlayer = booking
-    ? Math.ceil(booking.totalPriceInCents / booking.expectedPlayers) +
+    ? Math.ceil(booking.totalPriceInCents / requiredPlayers) +
       booking.platformFeeInCents
     : 0;
 
@@ -358,13 +369,26 @@ export default function BookingSharePage() {
                 </article>
               )}
 
+              {booking.includeGoalkeeper && (
+                <article className={styles.statCard}>
+                  <span>
+                    <ShieldHalf size={16} />
+                    Goleiro (rateado)
+                  </span>
+
+                  <strong>
+                    {formatCurrency(booking.goalkeeperPriceInCents)}
+                  </strong>
+                </article>
+              )}
+
               <article className={styles.statCard}>
                 <span>
                   <Users size={16} />
                   Jogadores
                 </span>
                 <strong>
-                  {playersCount}/{booking.expectedPlayers}
+                  {playersCount}/{requiredPlayers}
                 </strong>
               </article>
             </div>
@@ -392,7 +416,7 @@ export default function BookingSharePage() {
                 </div>
 
                 <strong className={styles.playersCounter}>
-                  {playersCount}/{booking.expectedPlayers}
+                  {playersCount}/{requiredPlayers}
                 </strong>
               </div>
 
@@ -514,29 +538,14 @@ export default function BookingSharePage() {
               )}
 
               <div className={styles.playersList}>
-                {Array.from({ length: booking.expectedPlayers }).map(
-                  (_, index) => {
-                    const player = activePlayers[index];
+                {activePlayers.length === 0 && (
+                  <p className={styles.waitingHint}>
+                    Aguardando os jogadores confirmarem presença...
+                  </p>
+                )}
 
-                    if (!player) {
-                      return (
-                        <article key={index} className={styles.placeholderItem}>
-                          <span className={styles.playerIndex}>
-                            {index + 1}
-                          </span>
-
-                          <div className={styles.playerAvatar}>
-                            <UserRound size={18} />
-                          </div>
-
-                          <div className={styles.playerInfo}>
-                            <strong>Aguardando jogador...</strong>
-                            <small>Vaga disponível</small>
-                          </div>
-                        </article>
-                      );
-                    }
-
+                {activePlayers.map(
+                  (player, index) => {
                     const isCaptain = player.userId === booking.captainUserId;
                     const isYou = storedUser?.id === player.userId;
 
@@ -596,6 +605,33 @@ export default function BookingSharePage() {
                     );
                   },
                 )}
+
+                {booking.includeGoalkeeper && (
+                  <article className={styles.playerItem}>
+                    <span className={styles.playerIndex}>
+                      <ShieldHalf size={14} />
+                    </span>
+
+                    <div className={styles.playerAvatar}>
+                      <ShieldHalf size={18} />
+                    </div>
+
+                    <div className={styles.playerInfo}>
+                      <strong>Goleiro</strong>
+                      <small>Não entra no rateio</small>
+                    </div>
+                  </article>
+                )}
+
+                {booking.bookingStatus === "WAITING_PLAYERS" &&
+                  remainingSlots > 0 && (
+                    <p className={styles.waitingHint}>
+                      {remainingSlots === 1
+                        ? "Falta 1 jogador"
+                        : `Faltam ${remainingSlots} jogadores`}{" "}
+                      para liberar o pagamento.
+                    </p>
+                  )}
               </div>
             </section>
 

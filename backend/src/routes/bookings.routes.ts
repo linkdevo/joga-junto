@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import {
   getCollections,
+  getRequiredPlayers,
   withoutMongoId,
   withoutMongoIds,
   type Address,
@@ -31,6 +32,10 @@ import {
   publishAvailabilityEvent,
   subscribeAvailability,
 } from "../realtime/availability-events";
+import {
+  authenticateAdmin,
+  type AuthenticatedAdminRequest,
+} from "../middlewares/authenticate-admin";
 import { getRouteParam } from "../utils/route-params";
 
 import { withBookingLock } from "../utils/keyed-lock";
@@ -751,6 +756,8 @@ router.get("/courts", async (request, response) => {
       price: court.priceInCents / 100,
 
       players: court.players,
+      minPlayers: court.minPlayers ?? court.players,
+      goalkeeperPriceInCents: court.goalkeeperPriceInCents ?? 0,
 
       highlight: court.highlight,
       description: court.description,
@@ -1043,6 +1050,8 @@ router.get(
           priceInCents: court.priceInCents,
 
           players: court.players,
+          minPlayers: court.minPlayers ?? court.players,
+          goalkeeperPriceInCents: court.goalkeeperPriceInCents ?? 0,
         },
 
         date,
@@ -1267,6 +1276,8 @@ router.get(
           surface: court.surface,
           priceInCents: court.priceInCents,
           players: court.players,
+          minPlayers: court.minPlayers ?? court.players,
+          goalkeeperPriceInCents: court.goalkeeperPriceInCents ?? 0,
           slots: courtSlots,
         },
 
@@ -1496,7 +1507,7 @@ router.post(
         bookingDate,
         startTime,
 
-        goalkeeperPriceInCents = 0,
+        includeGoalkeeper = false,
 
         expectedPlayers,
 
@@ -1559,15 +1570,9 @@ router.post(
         });
       }
 
-      const goalkeeperPriceNumber = Number(goalkeeperPriceInCents || 0);
-
-      if (
-        !Number.isFinite(goalkeeperPriceNumber) ||
-        !Number.isInteger(goalkeeperPriceNumber) ||
-        goalkeeperPriceNumber < 0
-      ) {
+      if (typeof includeGoalkeeper !== "boolean") {
         return response.status(400).json({
-          message: "Valor dos goleiros inválido.",
+          message: "Informe se a reserva inclui goleiro.",
         });
       }
 
@@ -1640,6 +1645,22 @@ router.post(
           message: "Horário não disponível para esta quadra.",
         });
       }
+
+      /*
+       * Mínimo que libera o pagamento: definido pelo admin
+       * por quadra, nunca acima da capacidade informada.
+       */
+      const requiredPlayers = getRequiredPlayers({
+        expectedPlayers: expectedPlayersNumber,
+        minPlayers: court.minPlayers,
+      });
+
+      /*
+       * O valor do goleiro vem da quadra, nunca do cliente.
+       */
+      const goalkeeperPriceNumber = includeGoalkeeper
+        ? (court.goalkeeperPriceInCents ?? 0)
+        : 0;
 
       /**
        * Verificação amigável da quadra.
@@ -1768,7 +1789,7 @@ router.post(
       const totalPriceInCents = court.priceInCents + goalkeeperPriceNumber;
 
       const provisionalCourtShareInCents = Math.ceil(
-        totalPriceInCents / expectedPlayersNumber,
+        totalPriceInCents / requiredPlayers,
       );
 
       let captainCourtShareInCents = provisionalCourtShareInCents;
@@ -1780,10 +1801,9 @@ router.post(
       let captainLeisureFeeInCents = 0;
 
       let bookingStatus: BookingStatus =
-        expectedPlayersNumber <= 1 ? "PAYMENT_AVAILABLE" : "WAITING_PLAYERS";
+        requiredPlayers <= 1 ? "PAYMENT_AVAILABLE" : "WAITING_PLAYERS";
 
-      let pricingFrozenAt: Date | null =
-        expectedPlayersNumber <= 1 ? now : null;
+      let pricingFrozenAt: Date | null = requiredPlayers <= 1 ? now : null;
 
       let leisureStatus: "ACTIVE" | "CANCELLED_NO_PARTICIPANTS" | null =
         selectedLeisureArea ? "ACTIVE" : null;
@@ -1795,7 +1815,7 @@ router.post(
        * ser fechado durante a criação.
        */
 
-      if (expectedPlayersNumber === 1) {
+      if (requiredPlayers === 1) {
         captainCourtShareInCents = totalPriceInCents;
 
         if (selectedLeisureArea && captainParticipatesInLeisure) {
@@ -1855,6 +1875,10 @@ router.post(
         totalPriceInCents,
 
         expectedPlayers: expectedPlayersNumber,
+
+        minPlayers: requiredPlayers,
+
+        includeGoalkeeper,
 
         teamOneName: String(teamOneName || "Time A").trim(),
 
@@ -2071,53 +2095,73 @@ router.get("/bookings/share/:shareCode", async (request, response) => {
  * ============================================================
  */
 
-router.patch("/bookings/:id/teams", async (request, response) => {
-  try {
-    const { id } = request.params;
+router.patch(
+  "/bookings/:id/teams",
+  authenticate,
+  async (request: AuthenticatedRequest, response) => {
+    try {
+      const id = getRouteParam(request.params.id);
 
-    const { teamOneName, teamTwoName } = request.body;
+      if (!id) {
+        return response.status(400).json({
+          message: "O ID da reserva não foi informado.",
+        });
+      }
 
-    const { bookings } = await getCollections();
+      const { teamOneName, teamTwoName } = request.body;
 
-    const updatedBookingDocument = await bookings.findOneAndUpdate(
-      {
-        id,
-      },
+      if (!request.userId) {
+        return response.status(401).json({
+          message: "Usuário não autenticado.",
+        });
+      }
 
-      {
-        $set: {
-          teamOneName: String(teamOneName || "Time A").trim(),
+      const { bookings } = await getCollections();
 
-          teamTwoName: String(teamTwoName || "Time B").trim(),
-
-          updatedAt: new Date(),
+      /*
+       * Somente o capitão da reserva pode renomear os times.
+       */
+      const updatedBookingDocument = await bookings.findOneAndUpdate(
+        {
+          id,
+          captainUserId: request.userId,
         },
-      },
 
-      {
-        returnDocument: "after",
-      },
-    );
+        {
+          $set: {
+            teamOneName: String(teamOneName || "Time A").trim(),
 
-    if (!updatedBookingDocument) {
-      return response.status(404).json({
-        message: "Reserva não encontrada.",
+            teamTwoName: String(teamTwoName || "Time B").trim(),
+
+            updatedAt: new Date(),
+          },
+        },
+
+        {
+          returnDocument: "after",
+        },
+      );
+
+      if (!updatedBookingDocument) {
+        return response.status(404).json({
+          message: "Reserva não encontrada ou você não é o capitão dela.",
+        });
+      }
+
+      const booking = withoutMongoId(updatedBookingDocument);
+
+      const bookingWithPlayers = await buildBookingWithPlayers(booking);
+
+      return response.json(bookingWithPlayers);
+    } catch (error) {
+      console.error("Erro ao atualizar nomes dos times:", error);
+
+      return response.status(500).json({
+        message: "Erro ao atualizar nomes dos times.",
       });
     }
-
-    const booking = withoutMongoId(updatedBookingDocument);
-
-    const bookingWithPlayers = await buildBookingWithPlayers(booking);
-
-    return response.json(bookingWithPlayers);
-  } catch (error) {
-    console.error("Erro ao atualizar nomes dos times:", error);
-
-    return response.status(500).json({
-      message: "Erro ao atualizar nomes dos times.",
-    });
-  }
-});
+  },
+);
 
 /**
  * ============================================================
@@ -2307,7 +2351,7 @@ router.post(
          * O último jogador fecha o grupo e
          * dispara o rateio definitivo.
          */
-        if (totalActivePlayers >= booking.expectedPlayers) {
+        if (totalActivePlayers >= getRequiredPlayers(booking)) {
           updatedBooking = await finalizeBookingPricing(booking.id);
         }
 
@@ -2327,6 +2371,8 @@ router.post(
           totalPlayers: totalActivePlayers,
 
           expectedPlayers: booking.expectedPlayers,
+
+          minPlayers: getRequiredPlayers(booking),
 
           bookingStatus: updatedBooking.bookingStatus,
 
@@ -2493,9 +2539,22 @@ router.patch(
 
 router.patch(
   "/booking-players/:playerId/payment-status",
-  async (request, response) => {
+  authenticateAdmin,
+  async (request: AuthenticatedAdminRequest, response) => {
     try {
-      const { playerId } = request.params;
+      if (!request.admin) {
+        return response.status(401).json({
+          message: "Contexto administrativo não encontrado.",
+        });
+      }
+
+      const playerId = getRouteParam(request.params.playerId);
+
+      if (!playerId) {
+        return response.status(400).json({
+          message: "O ID do jogador não foi informado.",
+        });
+      }
 
       const { status } = request.body;
 
@@ -2512,6 +2571,24 @@ router.patch(
       }
 
       const { bookings, bookingPlayers } = await getCollections();
+
+      /*
+       * O admin só altera pagamentos de reservas do próprio complexo.
+       */
+      const targetPlayer = await bookingPlayers.findOne({ id: playerId });
+
+      const targetBooking = targetPlayer
+        ? await bookings.findOne({
+            id: targetPlayer.bookingId,
+            complexId: request.admin.complexId,
+          })
+        : null;
+
+      if (!targetPlayer || !targetBooking) {
+        return response.status(404).json({
+          message: "Jogador da reserva não encontrado.",
+        });
+      }
 
       const updatedPlayerDocument = await bookingPlayers.findOneAndUpdate(
         {

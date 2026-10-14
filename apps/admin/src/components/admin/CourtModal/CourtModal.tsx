@@ -335,6 +335,57 @@ export function CourtModal({
                 )}
               </div>
 
+              <div className={styles.group}>
+                <label htmlFor="court-min-players">
+                  Mínimo para liberar pagamento *
+                </label>
+
+                <input
+                  id="court-min-players"
+                  type="number"
+                  min="1"
+                  className={styles.input}
+                  value={form.minPlayers}
+                  placeholder={form.players || "10"}
+                  onChange={(event) =>
+                    updateField("minPlayers", event.target.value)
+                  }
+                />
+
+                {fieldErrors.minPlayers && (
+                  <span className={styles.fieldError}>
+                    {fieldErrors.minPlayers}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.group}>
+                <label htmlFor="court-goalkeeper-price">
+                  Valor do goleiro (rateado)
+                </label>
+
+                <div className={styles.priceWrapper}>
+                  <span>R$</span>
+
+                  <input
+                    id="court-goalkeeper-price"
+                    className={styles.input}
+                    value={form.goalkeeperPrice}
+                    placeholder="80,00"
+                    inputMode="decimal"
+                    onChange={(event) =>
+                      updateField("goalkeeperPrice", event.target.value)
+                    }
+                  />
+                </div>
+
+                {fieldErrors.goalkeeperPriceInCents && (
+                  <span className={styles.fieldError}>
+                    {fieldErrors.goalkeeperPriceInCents}
+                  </span>
+                )}
+              </div>
+
               <div className={`${styles.group} ${styles.full}`}>
                 <label htmlFor="court-highlight">Destaque</label>
 

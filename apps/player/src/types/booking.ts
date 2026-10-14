@@ -72,7 +72,7 @@ export type CreateBookingInput = {
   startTime: string;
   expectedPlayers: number;
 
-  goalkeeperPriceInCents?: number;
+  includeGoalkeeper?: boolean;
 
   teamOneName?: string;
   teamTwoName?: string;
@@ -108,6 +108,8 @@ export type CreatedBooking = {
   goalkeeperPriceInCents: number;
   totalPriceInCents: number;
   expectedPlayers: number;
+  minPlayers?: number;
+  includeGoalkeeper?: boolean;
 
   teamOneName: string;
   teamTwoName: string;
@@ -140,6 +142,7 @@ export type JoinBookingResponse = {
 
   totalPlayers: number;
   expectedPlayers: number;
+  minPlayers: number;
 
   bookingStatus: BookingStatus;
   pricingFrozenAt: string | null;
@@ -201,6 +204,8 @@ export type BookingOptions = {
     surface: string;
     priceInCents: number;
     players: number;
+    minPlayers: number;
+    goalkeeperPriceInCents: number;
     slots: AvailabilitySlot[];
   };
 

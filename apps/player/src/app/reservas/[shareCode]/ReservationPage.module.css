@@ -872,3 +872,13 @@
     flex-direction: column;
   }
 }
+
+.waitingHint {
+  margin: 6px 0 0;
+
+  color: #62728a;
+
+  font-size: 13px;
+
+  text-align: center;
+}

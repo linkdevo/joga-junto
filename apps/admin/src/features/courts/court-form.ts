@@ -17,6 +17,8 @@ export type CourtFormValues = {
   surface: string;
   price: string;
   players: string;
+  minPlayers: string;
+  goalkeeperPrice: string;
   highlight: string;
   description: string;
   imageUrl: string;
@@ -50,6 +52,22 @@ export function priceInputToCents(value: string) {
   return Math.round(numberValue * 100);
 }
 
+export function optionalPriceInputToCents(value: string) {
+  if (!value.trim()) {
+    return 0;
+  }
+
+  const normalizedValue = value.trim().replace(/\./g, "").replace(",", ".");
+
+  const numberValue = Number(normalizedValue);
+
+  if (!Number.isFinite(numberValue) || numberValue < 0) {
+    return null;
+  }
+
+  return Math.round(numberValue * 100);
+}
+
 export function sortUniqueTimes(times: string[]) {
   return [...new Set(times)].sort();
 }
@@ -65,6 +83,8 @@ export function createCourtFormValues(
       surface: "",
       price: "",
       players: "",
+      minPlayers: "",
+      goalkeeperPrice: "",
       highlight: "",
       description: "",
       imageUrl: "",
@@ -83,6 +103,10 @@ export function createCourtFormValues(
 
     players: String(court.players),
 
+    minPlayers: String(court.minPlayers ?? court.players),
+
+    goalkeeperPrice: formatPriceInput(court.goalkeeperPriceInCents ?? 0),
+
     highlight: court.highlight,
     description: court.description,
     imageUrl: court.imageUrl,
@@ -98,6 +122,14 @@ function basePayload(values: CourtFormValues): CourtBasePayload | null {
 
   const players = Number(values.players);
 
+  const minPlayers = values.minPlayers.trim()
+    ? Number(values.minPlayers)
+    : players;
+
+  const goalkeeperPriceInCents = optionalPriceInputToCents(
+    values.goalkeeperPrice,
+  );
+
   if (
     !values.name.trim() ||
     !values.type.trim() ||
@@ -107,6 +139,10 @@ function basePayload(values: CourtFormValues): CourtBasePayload | null {
     !priceInCents ||
     !Number.isInteger(players) ||
     players <= 0 ||
+    !Number.isInteger(minPlayers) ||
+    minPlayers <= 0 ||
+    minPlayers > players ||
+    goalkeeperPriceInCents === null ||
     values.times.length === 0
   ) {
     return null;
@@ -119,6 +155,8 @@ function basePayload(values: CourtFormValues): CourtBasePayload | null {
 
     priceInCents,
     players,
+    minPlayers,
+    goalkeeperPriceInCents,
 
     highlight: values.highlight.trim(),
 

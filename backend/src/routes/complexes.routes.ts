@@ -31,6 +31,8 @@ const courtSchema = z.object({
   surface: z.string().trim().min(2),
   priceInCents: z.number().int().positive(),
   players: z.number().int().positive(),
+  minPlayers: z.number().int().positive().optional(),
+  goalkeeperPriceInCents: z.number().int().min(0).optional().default(0),
   highlight: z.string().trim().optional().default(""),
   description: z.string().trim().min(2),
   imageUrl: z.string().trim().url(),
@@ -60,6 +62,21 @@ function isDuplicateKeyError(error: unknown) {
 }
 
 router.post("/complexos", async (request, response) => {
+  /*
+   * Cadastro de complexo é provisionamento interno: exige a mesma
+   * chave usada para criar administradores.
+   */
+  const creationSecret = request.headers["x-admin-creation-secret"];
+
+  if (
+    !process.env.ADMIN_CREATION_SECRET ||
+    creationSecret !== process.env.ADMIN_CREATION_SECRET
+  ) {
+    return response.status(401).json({
+      message: "Chave de criação administrativa inválida.",
+    });
+  }
+
   const parsedBody = complexSchema.safeParse(request.body);
 
   if (!parsedBody.success) {
@@ -141,6 +158,8 @@ router.post("/complexos", async (request, response) => {
 
       priceInCents: courtInput.priceInCents,
       players: courtInput.players,
+      minPlayers: courtInput.minPlayers ?? courtInput.players,
+      goalkeeperPriceInCents: courtInput.goalkeeperPriceInCents,
       highlight: courtInput.highlight,
       description: courtInput.description,
       imageUrl: courtInput.imageUrl,

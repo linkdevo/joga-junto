@@ -127,6 +127,18 @@ export type Court = {
   priceInCents: number;
   players: number;
 
+  /*
+   * Mínimo de jogadores para liberar o pagamento desta quadra.
+   * Documentos antigos não possuem o campo: usa-se `players`.
+   */
+  minPlayers?: number;
+
+  /*
+   * Valor do goleiro, rateado entre os jogadores quando a
+   * reserva inclui um goleiro. O goleiro não paga.
+   */
+  goalkeeperPriceInCents?: number;
+
   highlight: string;
   description: string;
   imageUrl: string;
@@ -182,6 +194,19 @@ export type Booking = {
   goalkeeperPriceInCents: number;
   totalPriceInCents: number;
   expectedPlayers: number;
+
+  /*
+   * Mínimo de jogadores que libera o pagamento, copiado da
+   * quadra na criação. Reservas antigas usam expectedPlayers.
+   */
+  minPlayers?: number;
+
+  /*
+   * A reserva inclui um goleiro avulso. O custo entra em
+   * goalkeeperPriceInCents/totalPriceInCents e é rateado entre
+   * os jogadores; o goleiro em si não paga.
+   */
+  includeGoalkeeper?: boolean;
 
   teamOneName: string;
   teamTwoName: string;
@@ -451,6 +476,15 @@ export async function getCollections() {
     payoutAccounts: database.collection<PayoutAccount>("payoutAccounts"),
     payoutRequests: database.collection<PayoutRequest>("payoutRequests"),
   };
+}
+
+export function getRequiredPlayers(
+  booking: { expectedPlayers: number; minPlayers?: number | null | undefined },
+) {
+  return Math.min(
+    booking.minPlayers ?? booking.expectedPlayers,
+    booking.expectedPlayers,
+  );
 }
 
 export function withoutMongoId<T extends { _id: unknown }>(

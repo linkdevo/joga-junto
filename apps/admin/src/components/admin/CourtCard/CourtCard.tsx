@@ -55,6 +55,11 @@ export function CourtCard({ court, onEdit }: CourtCardProps) {
           </span>
           <strong>{court.players}</strong>
         </div>
+
+        <div>
+          <span>Mínimo p/ pagamento</span>
+          <strong>{court.minPlayers ?? court.players}</strong>
+        </div>
       </div>
 
       <div className={styles.times}>

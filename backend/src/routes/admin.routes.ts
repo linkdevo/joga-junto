@@ -94,6 +94,23 @@ const adminCourtSchema = z.object({
     message: "A quantidade de jogadores deve ser positiva.",
   }),
 
+  minPlayers: z
+    .number()
+    .int()
+    .positive({
+      message: "O mínimo de jogadores deve ser positivo.",
+    })
+    .optional(),
+
+  goalkeeperPriceInCents: z
+    .number()
+    .int()
+    .min(0, {
+      message: "O valor do goleiro não pode ser negativo.",
+    })
+    .optional()
+    .default(0),
+
   highlight: z.string().trim().optional().default(""),
 
   description: z.string().trim().min(2, {
@@ -150,6 +167,22 @@ const adminCourtUpdateSchema = z
       .int()
       .positive({
         message: "A quantidade de jogadores deve ser positiva.",
+      })
+      .optional(),
+
+    minPlayers: z
+      .number()
+      .int()
+      .positive({
+        message: "O mínimo de jogadores deve ser positivo.",
+      })
+      .optional(),
+
+    goalkeeperPriceInCents: z
+      .number()
+      .int()
+      .min(0, {
+        message: "O valor do goleiro não pode ser negativo.",
       })
       .optional(),
 
@@ -476,6 +509,8 @@ router.get(
 
         priceInCents: court.priceInCents,
         players: court.players,
+        minPlayers: court.minPlayers ?? court.players,
+        goalkeeperPriceInCents: court.goalkeeperPriceInCents ?? 0,
 
         highlight: court.highlight,
         description: court.description,
@@ -553,6 +588,8 @@ router.get(
 
           priceInCents: court.priceInCents,
           players: court.players,
+          minPlayers: court.minPlayers ?? court.players,
+          goalkeeperPriceInCents: court.goalkeeperPriceInCents ?? 0,
 
           highlight: court.highlight,
           description: court.description,
@@ -599,6 +636,12 @@ router.post(
 
     const data = parsedBody.data;
 
+    if (data.minPlayers !== undefined && data.minPlayers > data.players) {
+      return response.status(400).json({
+        message: "O mínimo de jogadores não pode superar o total de jogadores.",
+      });
+    }
+
     try {
       const { courts, complexes } = await getCollections();
 
@@ -636,6 +679,8 @@ router.post(
 
         priceInCents: data.priceInCents,
         players: data.players,
+        minPlayers: data.minPlayers ?? data.players,
+        goalkeeperPriceInCents: data.goalkeeperPriceInCents,
 
         highlight: data.highlight,
         description: data.description,
@@ -767,6 +812,17 @@ router.patch(
         });
       }
 
+      const finalPlayers = data.players ?? existingCourt.players;
+      const finalMinPlayers =
+        data.minPlayers ?? existingCourt.minPlayers ?? finalPlayers;
+
+      if (finalMinPlayers > finalPlayers) {
+        return response.status(400).json({
+          message:
+            "O mínimo de jogadores não pode superar o total de jogadores.",
+        });
+      }
+
       const now = new Date();
 
       const updateFields = {
@@ -797,6 +853,18 @@ router.patch(
         ...(data.players !== undefined
           ? {
               players: data.players,
+            }
+          : {}),
+
+        ...(data.minPlayers !== undefined
+          ? {
+              minPlayers: data.minPlayers,
+            }
+          : {}),
+
+        ...(data.goalkeeperPriceInCents !== undefined
+          ? {
+              goalkeeperPriceInCents: data.goalkeeperPriceInCents,
             }
           : {}),
 
@@ -911,6 +979,8 @@ router.patch(
                   surface: existingCourt.surface,
                   priceInCents: existingCourt.priceInCents,
                   players: existingCourt.players,
+                  minPlayers: existingCourt.minPlayers ?? existingCourt.players,
+                  goalkeeperPriceInCents: existingCourt.goalkeeperPriceInCents ?? 0,
                   highlight: existingCourt.highlight,
                   description: existingCourt.description,
                   imageUrl: existingCourt.imageUrl,

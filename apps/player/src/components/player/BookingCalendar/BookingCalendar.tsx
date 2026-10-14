@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { CalendarDays, CookingPot, MapPin, Radio, X } from "lucide-react";
+import {
+  CalendarDays,
+  CookingPot,
+  MapPin,
+  Radio,
+  ShieldHalf,
+  X,
+} from "lucide-react";
 
 import type { Court } from "@/types/court";
 
@@ -99,6 +106,8 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
 
   const [includeLeisure, setIncludeLeisure] = useState(false);
 
+  const [includeGoalkeeper, setIncludeGoalkeeper] = useState(false);
+
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -128,8 +137,11 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
     );
   }, [selectedArea, selectedBlockId]);
 
+  const goalkeeperPriceInCents = availability?.court.goalkeeperPriceInCents ?? 0;
+
   const combinedTotalInCents =
     court.priceInCents +
+    (includeGoalkeeper ? goalkeeperPriceInCents : 0) +
     (includeLeisure && selectedBlock ? selectedBlock.priceInCents : 0);
 
   const canConfirm =
@@ -361,6 +373,8 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
 
           expectedPlayers: court.players,
 
+          includeGoalkeeper,
+
           ...(includeLeisure &&
           selectedArea &&
           selectedBlock &&
@@ -560,6 +574,31 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
             )}
           </article>
 
+          <article className={styles.leisurePanel}>
+            <label className={styles.leisureToggle}>
+              <input
+                type="checkbox"
+                checked={includeGoalkeeper}
+                onChange={(event) => setIncludeGoalkeeper(event.target.checked)}
+              />
+
+              <span className={styles.toggleIcon}>
+                <ShieldHalf size={22} />
+              </span>
+
+              <span>
+                <strong>Incluir goleiro</strong>
+
+                <small>
+                  Use quando o time não tem goleiro fixo.
+                  {goalkeeperPriceInCents > 0
+                    ? ` ${formatCurrency(goalkeeperPriceInCents)} divididos entre os jogadores; o goleiro não paga.`
+                    : " O goleiro não entra no rateio."}
+                </small>
+              </span>
+            </label>
+          </article>
+
           {availability && availability.leisureAreas.length > 0 && (
             <article className={styles.leisurePanel}>
               <label className={styles.leisureToggle}>
@@ -712,6 +751,14 @@ export function BookingCalendar({ court, onClose }: BookingCalendarProps) {
 
                 <strong>{formatCurrency(court.priceInCents)}</strong>
               </div>
+
+              {includeGoalkeeper && (
+                <div>
+                  <span>Goleiro (rateado)</span>
+
+                  <strong>{formatCurrency(goalkeeperPriceInCents)}</strong>
+                </div>
+              )}
 
               {includeLeisure && selectedArea && selectedBlock && (
                 <div>

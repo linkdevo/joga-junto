@@ -45,6 +45,8 @@ export type AdminCourt = {
 
   priceInCents: number;
   players: number;
+  minPlayers: number;
+  goalkeeperPriceInCents: number;
 
   highlight: string;
   description: string;
@@ -104,6 +106,8 @@ export type CreateAdminCourtPayload = {
 
   priceInCents: number;
   players: number;
+  minPlayers: number;
+  goalkeeperPriceInCents: number;
 
   highlight: string;
   description: string;

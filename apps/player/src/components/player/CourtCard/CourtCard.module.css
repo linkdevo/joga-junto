@@ -256,6 +256,8 @@
   width: 100%;
   min-height: 48px;
 
+  cursor: pointer;
+
   margin-top: 20px;
 
   display: flex;
